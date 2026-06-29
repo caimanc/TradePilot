@@ -9,13 +9,22 @@ private:
 
 public:
 
+   //==================================================
+   // Constructor
+   //==================================================
+
    CTPCore()
    {
       m_initialized = false;
    }
 
+   //==================================================
+   // Inicialización
+   //==================================================
+
    bool Initialize()
    {
+
       Print("======================================");
       Print("TradePilot Core");
       Print("Inicializando núcleo...");
@@ -28,13 +37,30 @@ public:
       return true;
    }
 
+   //==================================================
+   // Bucle principal
+   //==================================================
+
    void Update()
    {
       if(!m_initialized)
          return;
 
       // Aquí se ejecutarán todos los módulos
+
+      // Config.Update();
+      // Market.Update();
+      // Sessions.Update();
+      // Strategy.Update();
+      // Risk.Update();
+      // Trade.Update();
+      // Statistics.Update();
+      // UI.Update();
    }
+
+   //==================================================
+   // Finalización
+   //==================================================
 
    void Shutdown()
    {
@@ -46,10 +72,14 @@ public:
       m_initialized = false;
    }
 
-   bool IsInitialized()
+   //==================================================
+   // Estado
+   //==================================================
+
+   bool IsInitialized() const
    {
       return m_initialized;
    }
 };
 
-#endif
+#endif // __TP_CORE_MQH__
