@@ -1,25 +1,22 @@
 ﻿#ifndef __TP_MARKET_MQH__
 #define __TP_MARKET_MQH__
 
-#include "../Config/TP_Config.mqh"
-
 class CTPMarket
 {
 private:
 
    //--------------------------------------------------
-   // Información del mercado
+   // Configuración
    //--------------------------------------------------
 
    string            m_symbol;
    ENUM_TIMEFRAMES   m_timeframe;
 
-   double            m_bid;
-   double            m_ask;
-   double            m_point;
-   double            m_spread;
+   //--------------------------------------------------
+   // Estado
+   //--------------------------------------------------
 
-   int               m_digits;
+   datetime          m_lastBarTime;
 
 public:
 
@@ -28,79 +25,63 @@ public:
    //--------------------------------------------------
 
    CTPMarket()
-      : m_symbol(""),
-        m_timeframe(PERIOD_CURRENT),
-        m_bid(0.0),
-        m_ask(0.0),
-        m_point(0.0),
-        m_spread(0.0),
-        m_digits(0)
    {
+      m_symbol      = "";
+      m_timeframe   = PERIOD_CURRENT;
+      m_lastBarTime = 0;
    }
 
    //--------------------------------------------------
    // Inicialización
    //--------------------------------------------------
 
-   bool Initialize(const CTPConfig &config)
+   bool Initialize(string symbol,
+                   ENUM_TIMEFRAMES timeframe)
    {
       Print("--------------------------------------");
       Print("Inicializando módulo Market...");
+      Print("--------------------------------------");
 
-      m_symbol = config.Symbol();
+      m_symbol = symbol;
 
-      if(config.Timeframe()==PERIOD_CURRENT)
-         m_timeframe=(ENUM_TIMEFRAMES)_Period;
+      if(timeframe == PERIOD_CURRENT)
+         m_timeframe = (ENUM_TIMEFRAMES)_Period;
       else
-         m_timeframe=config.Timeframe();
+         m_timeframe = timeframe;
 
-      m_bid     = SymbolInfoDouble(m_symbol,SYMBOL_BID);
-      m_ask     = SymbolInfoDouble(m_symbol,SYMBOL_ASK);
-
-      m_point   = SymbolInfoDouble(m_symbol,SYMBOL_POINT);
-
-      m_digits  = (int)SymbolInfoInteger(m_symbol,SYMBOL_DIGITS);
-
-      m_spread  = SymbolInfoInteger(m_symbol,SYMBOL_SPREAD) * m_point;
+      m_lastBarTime = iTime(m_symbol,m_timeframe,0);
 
       Print("Símbolo      : ",m_symbol);
       Print("TimeFrame    : ",EnumToString(m_timeframe));
-      Print("Bid          : ",DoubleToString(m_bid,m_digits));
-      Print("Ask          : ",DoubleToString(m_ask,m_digits));
-      Print("Spread       : ",DoubleToString(m_spread,m_digits));
+      Print("Bid          : ",DoubleToString(Bid(),Digits()));
+      Print("Ask          : ",DoubleToString(Ask(),Digits()));
+      Print("Spread       : ",DoubleToString(Spread(),Digits()));
 
       Print("Market inicializado correctamente.");
-      Print("--------------------------------------");
 
       return true;
    }
 
    //--------------------------------------------------
-   // Actualización
+   // Update
    //--------------------------------------------------
 
    void Update()
    {
-      m_bid = SymbolInfoDouble(m_symbol,SYMBOL_BID);
 
-      m_ask = SymbolInfoDouble(m_symbol,SYMBOL_ASK);
-
-      m_spread =
-         SymbolInfoInteger(m_symbol,SYMBOL_SPREAD) *
-         m_point;
    }
 
    //--------------------------------------------------
-   // Finalización
+   // Shutdown
    //--------------------------------------------------
 
    void Shutdown()
    {
-      Print("Finalizando módulo Market...");
+      Print("Market detenido.");
    }
 
    //--------------------------------------------------
-   // Getters
+   // Información símbolo
    //--------------------------------------------------
 
    string Symbol() const
@@ -113,29 +94,84 @@ public:
       return m_timeframe;
    }
 
+   //--------------------------------------------------
+   // Tick actual
+   //--------------------------------------------------
+
    double Bid() const
    {
-      return m_bid;
+      return SymbolInfoDouble(m_symbol,SYMBOL_BID);
    }
 
    double Ask() const
    {
-      return m_ask;
+      return SymbolInfoDouble(m_symbol,SYMBOL_ASK);
    }
 
    double Spread() const
    {
-      return m_spread;
+      return Ask()-Bid();
    }
 
    double Point() const
    {
-      return m_point;
+      return SymbolInfoDouble(m_symbol,SYMBOL_POINT);
    }
 
    int Digits() const
    {
-      return m_digits;
+      return (int)SymbolInfoInteger(m_symbol,SYMBOL_DIGITS);
+   }
+
+   //--------------------------------------------------
+   // OHLC
+   //--------------------------------------------------
+
+   double Open(int shift) const
+   {
+      return iOpen(m_symbol,m_timeframe,shift);
+   }
+
+   double High(int shift) const
+   {
+      return iHigh(m_symbol,m_timeframe,shift);
+   }
+
+   double Low(int shift) const
+   {
+      return iLow(m_symbol,m_timeframe,shift);
+   }
+
+   double Close(int shift) const
+   {
+      return iClose(m_symbol,m_timeframe,shift);
+   }
+
+   long Volume(int shift) const
+   {
+      return iVolume(m_symbol,m_timeframe,shift);
+   }
+
+   datetime Time(int shift) const
+   {
+      return iTime(m_symbol,m_timeframe,shift);
+   }
+
+   //--------------------------------------------------
+   // Nueva vela
+   //--------------------------------------------------
+
+   bool IsNewBar()
+   {
+      datetime currentBar = iTime(m_symbol,m_timeframe,0);
+
+      if(currentBar != m_lastBarTime)
+      {
+         m_lastBarTime = currentBar;
+         return true;
+      }
+
+      return false;
    }
 
 };
