@@ -1,160 +1,172 @@
-﻿//+------------------------------------------------------------------+
-//|                                                      ProjectName |
-//|                                      Copyright 2020, CompanyName |
-//|                                       http://www.companyname.net |
-//+------------------------------------------------------------------+
-#ifndef __TP_INDICATORS_MQH__
+﻿#ifndef __TP_INDICATORS_MQH__
 #define __TP_INDICATORS_MQH__
 
-#include "../Market/TP_Market.mqh"
+#include "TP_EMA.mqh"
+#include "TP_ATR.mqh"
+#include "TP_ADX.mqh"
 
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
 class CTPIndicators
-  {
+{
 private:
 
    //--------------------------------------------------
-   // Dependencias
+   // Configuración
    //--------------------------------------------------
 
-   CTPMarket         *m_market;
+   string            m_symbol;
+   ENUM_TIMEFRAMES   m_timeframe;
 
    //--------------------------------------------------
-   // Handles
+   // Indicadores
    //--------------------------------------------------
 
-   int               m_handleEMA20;
-   int               m_handleEMA50;
+   CTPEMA            m_ema20;
+   CTPEMA            m_ema50;
 
-   int               m_handleATR14;
+   CTPATR            m_atr;
 
-   int               m_handleADX14;
+   CTPADX            m_adx;
 
 public:
 
-   //--------------------------------------------------
-   // Constructor
-   //--------------------------------------------------
-
-                     CTPIndicators()
-     {
-      m_market = NULL;
-
-      m_handleEMA20 = INVALID_HANDLE;
-      m_handleEMA50 = INVALID_HANDLE;
-
-      m_handleATR14 = INVALID_HANDLE;
-
-      m_handleADX14 = INVALID_HANDLE;
-     }
+   CTPIndicators()
+   {
+      m_symbol="";
+      m_timeframe=PERIOD_CURRENT;
+   }
 
    //--------------------------------------------------
    // Inicialización
    //--------------------------------------------------
 
-   bool              Initialize(CTPMarket &market)
-     {
+   bool Initialize(
+      string symbol,
+      ENUM_TIMEFRAMES timeframe)
+   {
       Print("--------------------------------------");
-      Print("Inicializando módulo Indicators...");
+      Print("Inicializando Indicators...");
       Print("--------------------------------------");
 
-      m_market = &market;
+      m_symbol=symbol;
+      m_timeframe=timeframe;
 
-      string symbol = m_market.Symbol();
-      ENUM_TIMEFRAMES tf = m_market.Timeframe();
+      //--------------------------------------------------
+      // EMA20
+      //--------------------------------------------------
 
-      //------------------------------------------
-      // EMA 20
-      //------------------------------------------
-
-      m_handleEMA20 =
-         iMA(symbol,
-             tf,
-             20,
-             0,
-             MODE_EMA,
-             PRICE_CLOSE);
-
-      //------------------------------------------
-      // EMA 50
-      //------------------------------------------
-
-      m_handleEMA50 =
-         iMA(symbol,
-             tf,
-             50,
-             0,
-             MODE_EMA,
-             PRICE_CLOSE);
-
-      //------------------------------------------
-      // ATR
-      //------------------------------------------
-
-      m_handleATR14 =
-         iATR(symbol,
-              tf,
-              14);
-
-      //------------------------------------------
-      // ADX
-      //------------------------------------------
-
-      m_handleADX14 =
-         iADX(symbol,
-              tf,
-              14);
-
-      if(m_handleEMA20==INVALID_HANDLE)
+      if(!m_ema20.Initialize(
+            m_symbol,
+            m_timeframe,
+            20))
          return false;
 
-      if(m_handleEMA50==INVALID_HANDLE)
+      //--------------------------------------------------
+      // EMA50
+      //--------------------------------------------------
+
+      if(!m_ema50.Initialize(
+            m_symbol,
+            m_timeframe,
+            50))
          return false;
 
-      if(m_handleATR14==INVALID_HANDLE)
+      //--------------------------------------------------
+      // ATR14
+      //--------------------------------------------------
+
+      if(!m_atr.Initialize(
+            m_symbol,
+            m_timeframe,
+            14))
          return false;
 
-      if(m_handleADX14==INVALID_HANDLE)
+      //--------------------------------------------------
+      // ADX14
+      //--------------------------------------------------
+
+      if(!m_adx.Initialize(
+            m_symbol,
+            m_timeframe,
+            14))
          return false;
 
       Print("Indicators inicializado correctamente.");
 
       return true;
-     }
+   }
 
    //--------------------------------------------------
    // Update
    //--------------------------------------------------
 
-   void              Update()
-     {
+   void Update()
+   {
+      m_ema20.Update();
+      m_ema50.Update();
 
-     }
+      m_atr.Update();
+
+      m_adx.Update();
+   }
 
    //--------------------------------------------------
    // Shutdown
    //--------------------------------------------------
 
-   void              Shutdown()
-     {
-      if(m_handleEMA20!=INVALID_HANDLE)
-         IndicatorRelease(m_handleEMA20);
+   void Shutdown()
+   {
+      m_ema20.Shutdown();
+      m_ema50.Shutdown();
 
-      if(m_handleEMA50!=INVALID_HANDLE)
-         IndicatorRelease(m_handleEMA50);
+      m_atr.Shutdown();
 
-      if(m_handleATR14!=INVALID_HANDLE)
-         IndicatorRelease(m_handleATR14);
-
-      if(m_handleADX14!=INVALID_HANDLE)
-         IndicatorRelease(m_handleADX14);
+      m_adx.Shutdown();
 
       Print("Indicators detenido.");
-     }
+   }
 
-  };
+   //--------------------------------------------------
+   // EMA
+   //--------------------------------------------------
+
+   double EMA20(int shift=0)
+   {
+      return m_ema20.Value(shift);
+   }
+
+   double EMA50(int shift=0)
+   {
+      return m_ema50.Value(shift);
+   }
+
+   //--------------------------------------------------
+   // ATR
+   //--------------------------------------------------
+
+   double ATR(int shift=0)
+   {
+      return m_atr.Value(shift);
+   }
+
+   //--------------------------------------------------
+   // ADX
+   //--------------------------------------------------
+
+   double ADX(int shift=0)
+   {
+      return m_adx.ADX(shift);
+   }
+
+   double PlusDI(int shift=0)
+   {
+      return m_adx.PlusDI(shift);
+   }
+
+   double MinusDI(int shift=0)
+   {
+      return m_adx.MinusDI(shift);
+   }
+
+};
 
 #endif
-//+------------------------------------------------------------------+

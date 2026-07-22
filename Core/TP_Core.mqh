@@ -1,7 +1,5 @@
 ﻿//+------------------------------------------------------------------+
-//|                                                      ProjectName |
-//|                                      Copyright 2020, CompanyName |
-//|                                       http://www.companyname.net |
+//|                                                      TradePilot  |
 //+------------------------------------------------------------------+
 #ifndef __TP_CORE_MQH__
 #define __TP_CORE_MQH__
@@ -10,6 +8,8 @@
 #include "../Market/TP_Market.mqh"
 #include "../Sessions/TP_Sessions.mqh"
 #include "../Indicators/TP_Indicators.mqh"
+#include "../MarketState/TP_MarketState.mqh"
+#include "../Signals/TP_SignalManager.mqh"
 
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -32,6 +32,8 @@ private:
    CTPMarket         m_market;
    CTPSessions       m_sessions;
    CTPIndicators     m_indicators;
+   CTPMarketState    m_marketState;
+   CTPSignalManager  m_signalManager;
 
 public:
 
@@ -50,6 +52,7 @@ public:
 
                     ~CTPCore()
      {
+      Shutdown();
      }
 
    //--------------------------------------------------
@@ -60,8 +63,13 @@ public:
      {
       Print("");
       Print("======================================");
-      Print("        TradePilot v0.1");
+      Print("TradePilot Core");
+      Print("Inicializando núcleo...");
       Print("======================================");
+
+      //--------------------------------------------------
+      // Configuración
+      //--------------------------------------------------
 
       Print("");
       Print("Configuración");
@@ -70,8 +78,6 @@ public:
       Print("TimeFrame    : ", EnumToString(m_config.Timeframe()));
       Print("Riesgo       : ", DoubleToString(m_config.RiskPercent(),2), "%");
       Print("MagicNumber  : ", m_config.MagicNumber());
-
-      Print("");
 
       //--------------------------------------------------
       // Market
@@ -104,19 +110,39 @@ public:
       // Indicators
       //--------------------------------------------------
 
-      if(!m_indicators.Initialize(m_market))
+      if(!m_indicators.Initialize(
+            m_config.Symbol(),
+            m_config.Timeframe()))
         {
          Print("ERROR inicializando Indicators.");
          return false;
         }
 
       //--------------------------------------------------
+      // MarketState
+      //--------------------------------------------------
+
+      if(!m_marketState.Initialize(m_indicators))
+        {
+         Print("ERROR inicializando MarketState.");
+         return false;
+        }
+
+      //--------------------------------------------------
+      // SignalManager
+      //--------------------------------------------------
+
+      if(!m_signalManager.Initialize(m_marketState))
+        {
+         Print("ERROR inicializando SignalManager.");
+         return false;
+        }
 
       m_initialized = true;
 
       Print("");
-      Print("TradePilot iniciado correctamente.");
-      Print("");
+      Print("Core inicializado correctamente.");
+      Print("======================================");
 
       return true;
      }
@@ -131,26 +157,100 @@ public:
          return;
 
       //--------------------------------------------------
-      // Orden de actualización
+      // Actualizar módulos
       //--------------------------------------------------
 
       m_market.Update();
-
       m_sessions.Update();
-
       m_indicators.Update();
+      m_marketState.Update();
+      m_signalManager.Update();
 
       //--------------------------------------------------
-      // Próximos módulos
+      // Mostrar una vez por vela
       //--------------------------------------------------
 
-      // m_signals.Update();
-      // m_probability.Update();
-      // m_strategy.Update();
-      // m_risk.Update();
-      // m_trade.Update();
-      // m_statistics.Update();
-      // m_ui.Update();
+      static datetime lastBar = 0;
+
+      datetime currentBar =
+         iTime(
+            m_config.Symbol(),
+            m_config.Timeframe(),
+            0);
+
+      if(currentBar == lastBar)
+         return;
+
+      lastBar = currentBar;
+
+      Print("");
+      Print("======================================");
+      Print("TradePilot");
+      Print("--------------------------------------");
+
+      //--------------------------------------------------
+      // Indicadores
+      //--------------------------------------------------
+
+      Print("EMA20 : ",
+            DoubleToString(m_indicators.EMA20(),5));
+
+      Print("EMA50 : ",
+            DoubleToString(m_indicators.EMA50(),5));
+
+      Print("ATR14 : ",
+            DoubleToString(m_indicators.ATR(),5));
+
+      Print("ADX14 : ",
+            DoubleToString(m_indicators.ADX(),2));
+
+      Print("+DI   : ",
+            DoubleToString(m_indicators.PlusDI(),2));
+
+      Print("-DI   : ",
+            DoubleToString(m_indicators.MinusDI(),2));
+
+      //--------------------------------------------------
+      // Estado del mercado
+      //--------------------------------------------------
+
+      Print("--------------------------------------");
+
+      Print("Bull Trend      : ",
+            m_marketState.IsBullTrend() ? "SI" : "NO");
+
+      Print("Bear Trend      : ",
+            m_marketState.IsBearTrend() ? "SI" : "NO");
+
+      Print("Range           : ",
+            m_marketState.IsRange() ? "SI" : "NO");
+
+      Print("High Volatility : ",
+            m_marketState.IsHighVolatility() ? "SI" : "NO");
+
+      Print("Trend Strength  : ",
+            DoubleToString(
+               m_marketState.TrendStrength(),
+               2));
+
+      Print("Volatility      : ",
+            DoubleToString(
+               m_marketState.Volatility(),
+               2));
+
+      //--------------------------------------------------
+      // Señales
+      //--------------------------------------------------
+
+      Print("--------------------------------------");
+
+      Print("BUY Signal  : ",
+            m_signalManager.Buy() ? "SI" : "NO");
+
+      Print("SELL Signal : ",
+            m_signalManager.Sell() ? "SI" : "NO");
+
+      Print("======================================");
      }
 
    //--------------------------------------------------
@@ -162,17 +262,15 @@ public:
       if(!m_initialized)
          return;
 
+      m_signalManager.Shutdown();
+      m_marketState.Shutdown();
       m_indicators.Shutdown();
-
       m_sessions.Shutdown();
-
       m_market.Shutdown();
 
-      m_initialized = false;
+      Print("Core detenido.");
 
-      Print("");
-      Print("TradePilot detenido.");
-      Print("");
+      m_initialized = false;
      }
 
    //--------------------------------------------------
@@ -187,4 +285,5 @@ public:
   };
 
 #endif
+//+------------------------------------------------------------------+
 //+------------------------------------------------------------------+

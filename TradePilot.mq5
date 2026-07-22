@@ -16,6 +16,8 @@ CTPCore g_core;
 //+------------------------------------------------------------------+
 int OnInit()
   {
+  
+   
    if(!g_core.Initialize())
       return(INIT_FAILED);
 
