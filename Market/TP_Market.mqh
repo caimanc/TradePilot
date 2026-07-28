@@ -1,4 +1,4 @@
-﻿#ifndef __TP_MARKET_MQH__
+#ifndef __TP_MARKET_MQH__
 #define __TP_MARKET_MQH__
 
 //+------------------------------------------------------------------+
@@ -60,6 +60,7 @@ public:
    bool Update()
    {
       m_bid = SymbolInfoDouble(m_symbol,SYMBOL_BID);
+
       m_ask = SymbolInfoDouble(m_symbol,SYMBOL_ASK);
 
       m_spread =
@@ -81,11 +82,11 @@ public:
 
    bool IsNewBar()
    {
-      static datetime previousBar=0;
+      static datetime previousBar = 0;
 
-      if(m_lastBarTime!=previousBar)
+      if(m_lastBarTime != previousBar)
       {
-         previousBar=m_lastBarTime;
+         previousBar = m_lastBarTime;
          return true;
       }
 
@@ -124,6 +125,15 @@ public:
    datetime LastBar() const
    {
       return m_lastBarTime;
+   }
+
+   //--------------------------------------------------
+   // Shutdown
+   //--------------------------------------------------
+
+   void Shutdown()
+   {
+      Print("Market detenido.");
    }
 
 };

@@ -1,8 +1,9 @@
-﻿#ifndef __TP_TRADEMANAGER_MQH__
+#ifndef __TP_TRADEMANAGER_MQH__
 #define __TP_TRADEMANAGER_MQH__
 
 #include "TP_Execution.mqh"
 #include "../Signals/TP_SignalManager.mqh"
+#include "../Risk/TP_RiskManager.mqh"
 
 //+------------------------------------------------------------------+
 //| Gestor de operaciones                                            |
@@ -13,8 +14,6 @@ private:
 
    CTPExecution m_execution;
 
-   double m_volume;
-
 public:
 
    //--------------------------------------------------
@@ -23,11 +22,10 @@ public:
 
    CTPTradeManager()
    {
-      m_volume = 0.01;
    }
 
    //--------------------------------------------------
-   // Inicializar
+   // Inicialización
    //--------------------------------------------------
 
    bool Initialize(long magicNumber)
@@ -40,19 +38,12 @@ public:
    }
 
    //--------------------------------------------------
-   // Configuración
+   // Actualización
    //--------------------------------------------------
 
-   void SetVolume(double volume)
-   {
-      m_volume = volume;
-   }
-
-   //--------------------------------------------------
-   // Ejecutar señales
-   //--------------------------------------------------
-
-   bool Update(const CTPSignalManager &signals)
+   bool Update(
+      const CTPSignalManager &signals,
+      CTPRiskManager &risk)
    {
       //--------------------------------------------------
       // Ya existe una posición
@@ -62,6 +53,16 @@ public:
          return true;
 
       //--------------------------------------------------
+      // Validar riesgo
+      //--------------------------------------------------
+
+      if(!risk.CanOpenTrade())
+      {
+         Print("Trade bloqueado por RiskManager.");
+         return true;
+      }
+
+      //--------------------------------------------------
       // BUY
       //--------------------------------------------------
 
@@ -69,10 +70,16 @@ public:
       {
          Print(">>> BUY SIGNAL");
 
-         return m_execution.Buy(
-            m_volume,
-            0.0,
-            0.0);
+         bool ok =
+            m_execution.Buy(
+               risk.Volume(),
+               risk.StopLoss(),
+               risk.TakeProfit());
+
+         if(ok)
+            risk.RegisterTrade();
+
+         return ok;
       }
 
       //--------------------------------------------------
@@ -83,13 +90,28 @@ public:
       {
          Print(">>> SELL SIGNAL");
 
-         return m_execution.Sell(
-            m_volume,
-            0.0,
-            0.0);
+         bool ok =
+            m_execution.Sell(
+               risk.Volume(),
+               risk.StopLoss(),
+               risk.TakeProfit());
+
+         if(ok)
+            risk.RegisterTrade();
+
+         return ok;
       }
 
       return true;
+   }
+
+   //--------------------------------------------------
+   // Finalización
+   //--------------------------------------------------
+
+   void Shutdown()
+   {
+      Print("TradeManager detenido.");
    }
 
 };

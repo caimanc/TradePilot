@@ -1,4 +1,4 @@
-﻿#ifndef __TP_CORE_MQH__
+#ifndef __TP_CORE_MQH__
 #define __TP_CORE_MQH__
 
 #include "../Config/TP_Config.mqh"
@@ -7,6 +7,7 @@
 #include "../MarketState/TP_MarketState.mqh"
 #include "../Signals/TP_SignalManager.mqh"
 #include "../Execution/TP_TradeManager.mqh"
+#include "../Risk/TP_RiskManager.mqh"
 
 //+------------------------------------------------------------------+
 //| Núcleo principal                                                 |
@@ -26,6 +27,7 @@ private:
    CTPIndicators    m_indicators;
    CTPMarketState   m_marketState;
    CTPSignalManager m_signalManager;
+   CTPRiskManager   m_riskManager;
    CTPTradeManager  m_tradeManager;
 
 public:
@@ -49,40 +51,22 @@ public:
       Print("Inicializando TradePilot...");
       Print("====================================");
 
-      //--------------------------------------------------
-      // Market
-      //--------------------------------------------------
-
       if(!m_market.Initialize(
             m_config.Symbol(),
             m_config.Timeframe()))
-      {
-         Print("ERROR inicializando Market.");
          return false;
-      }
-
-      //--------------------------------------------------
-      // Indicators
-      //--------------------------------------------------
 
       if(!m_indicators.Initialize(
             m_config.Symbol(),
             m_config.Timeframe()))
-      {
-         Print("ERROR inicializando Indicators.");
          return false;
-      }
 
-      //--------------------------------------------------
-      // Trade Manager
-      //--------------------------------------------------
+      if(!m_riskManager.Initialize())
+         return false;
 
       if(!m_tradeManager.Initialize(
             m_config.MagicNumber()))
-      {
-         Print("ERROR inicializando TradeManager.");
          return false;
-      }
 
       m_initialized = true;
 
@@ -100,29 +84,13 @@ public:
       if(!m_initialized)
          return;
 
-      //--------------------------------------------------
-      // Actualizar mercado
-      //--------------------------------------------------
-
       m_market.Update();
-
-      //--------------------------------------------------
-      // Esperar nueva vela
-      //--------------------------------------------------
 
       if(!m_market.IsNewBar())
          return;
 
-      //--------------------------------------------------
-      // Indicadores
-      //--------------------------------------------------
-
       if(!m_indicators.Update())
          return;
-
-      //--------------------------------------------------
-      // Estado del mercado
-      //--------------------------------------------------
 
       m_marketState.Update(
          m_indicators.EMA20(),
@@ -132,35 +100,23 @@ public:
          m_indicators.MinusDI(),
          m_indicators.ATR());
 
-      //--------------------------------------------------
-      // Señales
-      //--------------------------------------------------
-
       m_signalManager.Update(
          m_marketState);
 
-      //--------------------------------------------------
-      // Trading
-      //--------------------------------------------------
+      m_riskManager.Update();
 
       m_tradeManager.Update(
-         m_signalManager);
-
-      //--------------------------------------------------
-      // Log
-      //--------------------------------------------------
+         m_signalManager,m_riskManager);
 
       Print("------------------------------------");
-      Print("EMA20 : ", DoubleToString(m_indicators.EMA20(),5));
-      Print("EMA50 : ", DoubleToString(m_indicators.EMA50(),5));
-      Print("ADX   : ", DoubleToString(m_indicators.ADX(),2));
-      Print("ATR   : ", DoubleToString(m_indicators.ATR(),5));
-
-      Print("Bull  : ", m_marketState.IsBullTrend());
-      Print("Bear  : ", m_marketState.IsBearTrend());
-
-      Print("BUY   : ", m_signalManager.Buy());
-      Print("SELL  : ", m_signalManager.Sell());
+      Print("EMA20 : ",DoubleToString(m_indicators.EMA20(),5));
+      Print("EMA50 : ",DoubleToString(m_indicators.EMA50(),5));
+      Print("ADX   : ",DoubleToString(m_indicators.ADX(),2));
+      Print("ATR   : ",DoubleToString(m_indicators.ATR(),5));
+      Print("Bull  : ",m_marketState.IsBullTrend());
+      Print("Bear  : ",m_marketState.IsBearTrend());
+      Print("BUY   : ",m_signalManager.Buy());
+      Print("SELL  : ",m_signalManager.Sell());
       Print("------------------------------------");
    }
 
@@ -177,15 +133,9 @@ public:
       Print("Cerrando TradePilot...");
       Print("====================================");
 
-      //--------------------------------------------------
-      // Liberar recursos
-      //--------------------------------------------------
-
+      m_tradeManager.Shutdown();
+      m_riskManager.Shutdown();
       m_indicators.Shutdown();
-
-      //--------------------------------------------------
-      // Reset interno
-      //--------------------------------------------------
 
       m_initialized = false;
 
@@ -200,6 +150,7 @@ public:
    {
       return m_initialized;
    }
+
 };
 
 #endif
