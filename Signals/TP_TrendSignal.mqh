@@ -5,14 +5,10 @@
 #include "../MarketState/TP_MarketState.mqh"
 
 //+------------------------------------------------------------------+
-//| Señal basada en la tendencia del mercado                         |
+//| Señal basada en tendencia                                        |
 //+------------------------------------------------------------------+
 class CTPTrendSignal : public CTPSignal
 {
-private:
-
-   CTPMarketState *m_marketState;
-
 public:
 
    //--------------------------------------------------
@@ -20,49 +16,27 @@ public:
    //--------------------------------------------------
 
    CTPTrendSignal()
+      : CTPSignal()
    {
-      m_marketState = NULL;
    }
 
    //--------------------------------------------------
-   // Inicialización
+   // Actualizar
    //--------------------------------------------------
 
-   bool Initialize(CTPMarketState &marketState)
+   bool Update(const CTPMarketState &marketState)
    {
-      m_marketState = &marketState;
+      Reset();
 
-      Print("TrendSignal inicializado.");
+      if(marketState.IsBullTrend())
+         m_buy = true;
+
+      if(marketState.IsBearTrend())
+         m_sell = true;
 
       return true;
    }
 
-   //--------------------------------------------------
-   // Actualización
-   //--------------------------------------------------
-
-   void Update() override
-   {
-      Reset();
-
-      if(m_marketState == NULL)
-         return;
-
-      if(m_marketState.IsBullTrend())
-         m_buy = true;
-      else
-      if(m_marketState.IsBearTrend())
-         m_sell = true;
-   }
-
-   //--------------------------------------------------
-   // Finalización
-   //--------------------------------------------------
-
-   void Shutdown()
-   {
-      Print("TrendSignal detenido.");
-   }
 };
 
 #endif

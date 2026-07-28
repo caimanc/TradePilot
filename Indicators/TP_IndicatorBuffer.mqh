@@ -1,34 +1,18 @@
-﻿//+------------------------------------------------------------------+
-//|                                                      ProjectName |
-//|                                      Copyright 2020, CompanyName |
-//|                                       http://www.companyname.net |
-//+------------------------------------------------------------------+
-#ifndef __TP_INDICATORBUFFER_MQH__
+﻿#ifndef __TP_INDICATORBUFFER_MQH__
 #define __TP_INDICATORBUFFER_MQH__
 
 //+------------------------------------------------------------------+
-//|                                                                  |
+//| Buffer de un indicador MT5                                       |
 //+------------------------------------------------------------------+
 class CTPIndicatorBuffer
-  {
+{
 private:
 
-   //--------------------------------------------------
-   // Configuración
-   //--------------------------------------------------
+   int      m_handle;
+   int      m_buffer;
+   int      m_history;
 
-   int               m_handle;
-   int               m_buffer;
-
-   //--------------------------------------------------
-   // Datos
-   //--------------------------------------------------
-
-   double            m_values[];
-
-   int               m_size;
-
-   bool              m_ready;
+   double   m_values[];
 
 public:
 
@@ -36,130 +20,77 @@ public:
    // Constructor
    //--------------------------------------------------
 
-                     CTPIndicatorBuffer()
-     {
-      m_handle = INVALID_HANDLE;
-      m_buffer = 0;
-
-      m_size = 0;
-
-      m_ready = false;
-     }
+   CTPIndicatorBuffer()
+   {
+      m_handle  = INVALID_HANDLE;
+      m_buffer  = 0;
+      m_history = 0;
+   }
 
    //--------------------------------------------------
    // Inicialización
    //--------------------------------------------------
 
-   bool              Initialize(
+   bool Initialize(
       int handle,
       int buffer,
-      int size)
-     {
-      if(handle == INVALID_HANDLE)
-         return false;
+      int history = 200)
+   {
+      m_handle  = handle;
+      m_buffer  = buffer;
+      m_history = history;
 
-      m_handle = handle;
-      m_buffer = buffer;
-      m_size   = size;
-
-      ArrayResize(m_values,m_size);
-      ArraySetAsSeries(m_values,true);
-      ArrayInitialize(m_values,0.0);
-
-      m_ready = true;
+      ArraySetAsSeries(m_values, true);
 
       return true;
-     }
+   }
 
    //--------------------------------------------------
-   // Actualizar
+   // Actualizar datos
    //--------------------------------------------------
 
-   bool              Update()
-     {
-      if(!m_ready)
-        {
-         Print("IndicatorBuffer: buffer no inicializado.");
+   bool Update()
+   {
+      if(m_handle == INVALID_HANDLE)
          return false;
-        }
-
-      ResetLastError();
 
       int copied =
          CopyBuffer(
             m_handle,
             m_buffer,
             0,
-            m_size,
+            m_history,
             m_values);
 
-      if(copied <= 0)
-        {
-         Print("CopyBuffer ERROR");
-         Print("Handle     : ", m_handle);
-         Print("Buffer     : ", m_buffer);
-         Print("Solicitados: ", m_size);
-         Print("Copiados   : ", copied);
-         Print("LastError  : ", GetLastError());
-
-         return false;
-        }
-
-      return true;
-     }
+      return (copied > 0);
+   }
 
    //--------------------------------------------------
-   // Valor
+   // Obtener valor
    //--------------------------------------------------
 
-   double            Value(int shift=0) const
-     {
-      if(!m_ready)
-         return EMPTY_VALUE;
-
+   double Value(int shift = 0) const
+   {
       if(shift < 0)
-         return EMPTY_VALUE;
+         return 0.0;
 
-      if(shift >= m_size)
-         return EMPTY_VALUE;
+      if(shift >= ArraySize(m_values))
+         return 0.0;
 
       return m_values[shift];
-     }
+   }
 
    //--------------------------------------------------
-   // Tamaño
+   // Liberar
    //--------------------------------------------------
 
-   int               Size() const
-     {
-      return m_size;
-     }
-
-   //--------------------------------------------------
-   // Estado
-   //--------------------------------------------------
-
-   bool              Ready() const
-     {
-      return m_ready;
-     }
-
-   //--------------------------------------------------
-   // Liberar memoria
-   //--------------------------------------------------
-
-   void              Shutdown()
-     {
+   void Shutdown()
+   {
       ArrayFree(m_values);
 
-      m_ready = false;
-
       m_handle = INVALID_HANDLE;
-      m_buffer = 0;
-      m_size = 0;
-     }
+   }
 
-  };
+};
 
 #endif
-//+------------------------------------------------------------------+

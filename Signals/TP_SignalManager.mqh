@@ -2,7 +2,11 @@
 #define __TP_SIGNALMANAGER_MQH__
 
 #include "TP_TrendSignal.mqh"
+#include "../MarketState/TP_MarketState.mqh"
 
+//+------------------------------------------------------------------+
+//| Administrador de señales                                         |
+//+------------------------------------------------------------------+
 class CTPSignalManager
 {
 private:
@@ -11,15 +15,26 @@ private:
 
 public:
 
-   bool Initialize(CTPMarketState &marketState)
+   //--------------------------------------------------
+   // Constructor
+   //--------------------------------------------------
+
+   CTPSignalManager()
    {
-      return m_trendSignal.Initialize(marketState);
    }
 
-   void Update()
+   //--------------------------------------------------
+   // Actualizar señales
+   //--------------------------------------------------
+
+   bool Update(const CTPMarketState &marketState)
    {
-      m_trendSignal.Update();
+      return m_trendSignal.Update(marketState);
    }
+
+   //--------------------------------------------------
+   // Getters
+   //--------------------------------------------------
 
    bool Buy() const
    {
@@ -31,9 +46,13 @@ public:
       return m_trendSignal.Sell();
    }
 
-   void Shutdown()
+   //--------------------------------------------------
+   // Reset
+   //--------------------------------------------------
+
+   void Reset()
    {
-      m_trendSignal.Shutdown();
+      // Reservado para futuras señales
    }
 
 };

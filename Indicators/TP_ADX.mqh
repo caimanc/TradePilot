@@ -3,13 +3,12 @@
 
 #include "TP_Indicator.mqh"
 
+//+------------------------------------------------------------------+
+//| ADX                                                              |
+//+------------------------------------------------------------------+
 class CTPADX : public CTPIndicator
 {
 private:
-
-   //--------------------------------------------------
-   // Buffers
-   //--------------------------------------------------
 
    CTPIndicatorBuffer m_adx;
    CTPIndicatorBuffer m_plusDI;
@@ -31,11 +30,10 @@ public:
       m_timeframe = timeframe;
       m_period    = period;
 
-      m_handle =
-         iADX(
-            m_symbol,
-            m_timeframe,
-            m_period);
+      m_handle = iADX(
+         m_symbol,
+         m_timeframe,
+         m_period);
 
       if(m_handle==INVALID_HANDLE)
       {
@@ -43,32 +41,14 @@ public:
          return false;
       }
 
-      if(!m_adx.Initialize(
-            m_handle,
-            0,
-            history))
-      {
-         Print("ERROR buffer ADX.");
+      if(!m_adx.Initialize(m_handle,0,history))
          return false;
-      }
 
-      if(!m_plusDI.Initialize(
-            m_handle,
-            1,
-            history))
-      {
-         Print("ERROR buffer +DI.");
+      if(!m_plusDI.Initialize(m_handle,1,history))
          return false;
-      }
 
-      if(!m_minusDI.Initialize(
-            m_handle,
-            2,
-            history))
-      {
-         Print("ERROR buffer -DI.");
+      if(!m_minusDI.Initialize(m_handle,2,history))
          return false;
-      }
 
       m_initialized=true;
 
@@ -88,15 +68,15 @@ public:
 
       bool ok=true;
 
-      ok &= m_adx.Update();
-      ok &= m_plusDI.Update();
-      ok &= m_minusDI.Update();
+      ok = ok && m_adx.Update();
+      ok = ok && m_plusDI.Update();
+      ok = ok && m_minusDI.Update();
 
       return ok;
    }
 
    //--------------------------------------------------
-   // Getters
+   // Valor principal
    //--------------------------------------------------
 
    double Value(int shift=0) const override

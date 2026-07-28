@@ -1,43 +1,19 @@
 ﻿#ifndef __TP_CONFIG_MQH__
 #define __TP_CONFIG_MQH__
 
-//==================================================
-// TradePilot
-// Configuración Global
-//==================================================
-
+//+------------------------------------------------------------------+
+//| Configuración global del Expert                                 |
+//+------------------------------------------------------------------+
 class CTPConfig
 {
 private:
 
-   //--------------------------------------------------
-   // Mercado
-   //--------------------------------------------------
-
    string            m_symbol;
    ENUM_TIMEFRAMES   m_timeframe;
 
-   //--------------------------------------------------
-   // Trading
-   //--------------------------------------------------
-
-   double            m_riskPercent;
    long              m_magicNumber;
 
-   //--------------------------------------------------
-   // Broker
-   //--------------------------------------------------
-
-   int               m_brokerUtcOffset;
-
-   //--------------------------------------------------
-   // Sesiones habilitadas
-   //--------------------------------------------------
-
-   bool              m_tradeSydney;
-   bool              m_tradeTokyo;
-   bool              m_tradeLondon;
-   bool              m_tradeNewYork;
+   double            m_riskPercent;
 
 public:
 
@@ -47,34 +23,12 @@ public:
 
    CTPConfig()
    {
-      //-----------------------------
-      // Mercado
-      //-----------------------------
+      m_symbol       = _Symbol;
+      m_timeframe    = PERIOD_CURRENT;
 
-      m_symbol      = _Symbol;
-      m_timeframe   = PERIOD_CURRENT;
+      m_magicNumber  = 20260724;
 
-      //-----------------------------
-      // Trading
-      //-----------------------------
-
-      m_riskPercent = 1.0;
-      m_magicNumber = 2026001;
-
-      //-----------------------------
-      // Broker
-      //-----------------------------
-
-      m_brokerUtcOffset = 0;
-
-      //-----------------------------
-      // Sesiones
-      //-----------------------------
-
-      m_tradeSydney  = false;
-      m_tradeTokyo   = false;
-      m_tradeLondon  = true;
-      m_tradeNewYork = true;
+      m_riskPercent  = 1.0;
    }
 
    //--------------------------------------------------
@@ -91,41 +45,39 @@ public:
       return m_timeframe;
    }
 
-   double RiskPercent() const
-   {
-      return m_riskPercent;
-   }
-
    long MagicNumber() const
    {
       return m_magicNumber;
    }
 
-   int BrokerUtcOffset() const
+   double RiskPercent() const
    {
-      return m_brokerUtcOffset;
+      return m_riskPercent;
    }
 
-   bool TradeSydney() const
+   //--------------------------------------------------
+   // Setters
+   //--------------------------------------------------
+
+   void SetSymbol(string symbol)
    {
-      return m_tradeSydney;
+      m_symbol = symbol;
    }
 
-   bool TradeTokyo() const
+   void SetTimeframe(ENUM_TIMEFRAMES tf)
    {
-      return m_tradeTokyo;
+      m_timeframe = tf;
    }
 
-   bool TradeLondon() const
+   void SetMagicNumber(long magic)
    {
-      return m_tradeLondon;
+      m_magicNumber = magic;
    }
 
-   bool TradeNewYork() const
+   void SetRiskPercent(double risk)
    {
-      return m_tradeNewYork;
+      m_riskPercent = risk;
    }
-
 };
 
 #endif

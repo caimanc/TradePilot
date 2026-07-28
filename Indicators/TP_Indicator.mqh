@@ -1,35 +1,20 @@
-﻿//+------------------------------------------------------------------+
-//|                                                      TradePilot  |
-//+------------------------------------------------------------------+
-#ifndef __TP_INDICATOR_MQH__
+﻿#ifndef __TP_INDICATOR_MQH__
 #define __TP_INDICATOR_MQH__
 
 #include "TP_IndicatorBuffer.mqh"
 
 //+------------------------------------------------------------------+
-//| Clase base para todos los indicadores                            |
+//| Clase base para indicadores                                      |
 //+------------------------------------------------------------------+
 class CTPIndicator
 {
 protected:
 
-   //--------------------------------------------------
-   // Configuración
-   //--------------------------------------------------
-
    string            m_symbol;
    ENUM_TIMEFRAMES   m_timeframe;
    int               m_period;
 
-   //--------------------------------------------------
-   // Handle MT5
-   //--------------------------------------------------
-
    int               m_handle;
-
-   //--------------------------------------------------
-   // Estado
-   //--------------------------------------------------
 
    bool              m_initialized;
 
@@ -41,13 +26,13 @@ public:
 
    CTPIndicator()
    {
-      m_symbol      = "";
-      m_timeframe   = PERIOD_CURRENT;
-      m_period      = 0;
+      m_symbol       = "";
+      m_timeframe    = PERIOD_CURRENT;
+      m_period       = 0;
 
-      m_handle      = INVALID_HANDLE;
+      m_handle       = INVALID_HANDLE;
 
-      m_initialized = false;
+      m_initialized  = false;
    }
 
    //--------------------------------------------------
@@ -67,19 +52,19 @@ public:
       string symbol,
       ENUM_TIMEFRAMES timeframe,
       int period,
-      int history = 200) = 0;
+      int history=200)=0;
 
    //--------------------------------------------------
    // Actualización
    //--------------------------------------------------
 
-   virtual bool Update() = 0;
+   virtual bool Update()=0;
 
    //--------------------------------------------------
-   // Valor principal del indicador
+   // Valor principal
    //--------------------------------------------------
 
-   virtual double Value(int shift = 0) const = 0;
+   virtual double Value(int shift=0) const=0;
 
    //--------------------------------------------------
    // Liberar recursos
@@ -87,13 +72,13 @@ public:
 
    virtual void Shutdown()
    {
-      if(m_handle != INVALID_HANDLE)
+      if(m_handle!=INVALID_HANDLE)
       {
          IndicatorRelease(m_handle);
-         m_handle = INVALID_HANDLE;
+         m_handle=INVALID_HANDLE;
       }
 
-      m_initialized = false;
+      m_initialized=false;
    }
 
    //--------------------------------------------------
@@ -132,4 +117,3 @@ public:
 };
 
 #endif
-//+------------------------------------------------------------------+

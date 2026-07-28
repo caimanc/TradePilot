@@ -1,38 +1,20 @@
-﻿//+------------------------------------------------------------------+
-//|                                                      ProjectName |
-//|                                      Copyright 2020, CompanyName |
-//|                                       http://www.companyname.net |
-//+------------------------------------------------------------------+
-#ifndef __TP_MARKETSTATE_MQH__
+﻿#ifndef __TP_MARKETSTATE_MQH__
 #define __TP_MARKETSTATE_MQH__
 
-#include "../Indicators/TP_Indicators.mqh"
-
 //+------------------------------------------------------------------+
-//|                                                                  |
+//| Estado del mercado                                               |
 //+------------------------------------------------------------------+
 class CTPMarketState
-  {
+{
 private:
 
-   //--------------------------------------------------
-   // Dependencias
-   //--------------------------------------------------
+   bool   m_bullTrend;
+   bool   m_bearTrend;
+   bool   m_range;
+   bool   m_highVolatility;
 
-   CTPIndicators     *m_indicators;
-
-   //--------------------------------------------------
-   // Estado del mercado
-   //--------------------------------------------------
-
-   bool              m_bullTrend;
-   bool              m_bearTrend;
-   bool              m_range;
-
-   bool              m_highVolatility;
-
-   double            m_trendStrength;
-   double            m_volatility;
+   double m_trendStrength;
+   double m_volatility;
 
 public:
 
@@ -40,130 +22,118 @@ public:
    // Constructor
    //--------------------------------------------------
 
-                     CTPMarketState()
-     {
-      m_indicators = NULL;
+   CTPMarketState()
+   {
+      Reset();
+   }
 
-      m_bullTrend = false;
-      m_bearTrend = false;
-      m_range = true;
+   //--------------------------------------------------
+   // Reset
+   //--------------------------------------------------
 
+   void Reset()
+   {
+      m_bullTrend      = false;
+      m_bearTrend      = false;
+      m_range          = true;
       m_highVolatility = false;
 
-      m_trendStrength = 0.0;
-      m_volatility = 0.0;
-     }
+      m_trendStrength  = 0.0;
+      m_volatility     = 0.0;
+   }
 
    //--------------------------------------------------
-   // Inicialización
+   // Actualizar estado del mercado
    //--------------------------------------------------
 
-   bool              Initialize(CTPIndicators &indicators)
-     {
-      m_indicators = &indicators;
+   bool Update(
+      double ema20,
+      double ema50,
+      double adx,
+      double plusDI,
+      double minusDI,
+      double atr)
+   {
+      Reset();
 
-      Print("MarketState inicializado.");
-
-      return true;
-     }
-
-   //--------------------------------------------------
-   // Actualización
-   //--------------------------------------------------
-
-   void              Update()
-     {
-      if(m_indicators == NULL)
-         return;
-
-      m_trendStrength = m_indicators.ADX();
-      m_volatility    = m_indicators.ATR();
-
-      m_bullTrend = false;
-      m_bearTrend = false;
-      m_range     = false;
-
-      //--------------------------------------------------
-      // Mercado lateral
-      //--------------------------------------------------
-
-      if(m_trendStrength < 20)
-        {
-         m_range = true;
-         return;
-        }
-
-      //--------------------------------------------------
-      // Tendencia alcista
-      //--------------------------------------------------
-
-      if(m_indicators.EMA20() > m_indicators.EMA50() &&
-         m_indicators.PlusDI() > m_indicators.MinusDI())
-        {
-         m_bullTrend = true;
-        }
-
-      //--------------------------------------------------
-      // Tendencia bajista
-      //--------------------------------------------------
-
-      if(m_indicators.EMA20() < m_indicators.EMA50() &&
-         m_indicators.MinusDI() > m_indicators.PlusDI())
-        {
-         m_bearTrend = true;
-        }
+      m_trendStrength = adx;
+      m_volatility    = atr;
 
       //--------------------------------------------------
       // Volatilidad
       //--------------------------------------------------
 
-      m_highVolatility = (m_volatility >= 10.0);
-     }
+      m_highVolatility = (atr >= 10.0);
 
-   //--------------------------------------------------
-   // Shutdown
-   //--------------------------------------------------
+      //--------------------------------------------------
+      // Mercado lateral
+      //--------------------------------------------------
 
-   void              Shutdown()
-     {
-      Print("MarketState detenido.");
-     }
+      if(adx < 20.0)
+      {
+         m_range = true;
+         return true;
+      }
+
+      //--------------------------------------------------
+      // Tendencia alcista
+      //--------------------------------------------------
+
+      if(ema20 > ema50 &&
+         plusDI > minusDI)
+      {
+         m_bullTrend = true;
+         m_range     = false;
+      }
+
+      //--------------------------------------------------
+      // Tendencia bajista
+      //--------------------------------------------------
+
+      if(ema20 < ema50 &&
+         minusDI > plusDI)
+      {
+         m_bearTrend = true;
+         m_range     = false;
+      }
+
+      return true;
+   }
 
    //--------------------------------------------------
    // Getters
    //--------------------------------------------------
 
-   bool              IsBullTrend() const
-     {
+   bool IsBullTrend() const
+   {
       return m_bullTrend;
-     }
+   }
 
-   bool              IsBearTrend() const
-     {
+   bool IsBearTrend() const
+   {
       return m_bearTrend;
-     }
+   }
 
-   bool              IsRange() const
-     {
+   bool IsRange() const
+   {
       return m_range;
-     }
+   }
 
-   bool              IsHighVolatility() const
-     {
+   bool IsHighVolatility() const
+   {
       return m_highVolatility;
-     }
+   }
 
-   double            TrendStrength() const
-     {
+   double TrendStrength() const
+   {
       return m_trendStrength;
-     }
+   }
 
-   double            Volatility() const
-     {
+   double Volatility() const
+   {
       return m_volatility;
-     }
+   }
 
-  };
+};
 
 #endif
-//+------------------------------------------------------------------+

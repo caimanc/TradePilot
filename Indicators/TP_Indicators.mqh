@@ -5,108 +5,75 @@
 #include "TP_ATR.mqh"
 #include "TP_ADX.mqh"
 
+//+------------------------------------------------------------------+
+//| Contenedor de indicadores                                        |
+//+------------------------------------------------------------------+
 class CTPIndicators
 {
 private:
 
-   //--------------------------------------------------
-   // Configuración
-   //--------------------------------------------------
-
    string            m_symbol;
    ENUM_TIMEFRAMES   m_timeframe;
 
-   //--------------------------------------------------
-   // Indicadores
-   //--------------------------------------------------
-
    CTPEMA            m_ema20;
    CTPEMA            m_ema50;
-
-   CTPATR            m_atr;
-
-   CTPADX            m_adx;
+   CTPATR            m_atr14;
+   CTPADX            m_adx14;
 
 public:
 
+   //--------------------------------------------------
+   // Constructor
+   //--------------------------------------------------
+
    CTPIndicators()
    {
-      m_symbol="";
-      m_timeframe=PERIOD_CURRENT;
+      m_symbol    = "";
+      m_timeframe = PERIOD_CURRENT;
    }
 
    //--------------------------------------------------
-   // Inicialización
+   // Inicializar
    //--------------------------------------------------
 
    bool Initialize(
       string symbol,
       ENUM_TIMEFRAMES timeframe)
    {
-      Print("--------------------------------------");
-      Print("Inicializando Indicators...");
-      Print("--------------------------------------");
+      m_symbol    = symbol;
+      m_timeframe = timeframe;
 
-      m_symbol=symbol;
-      m_timeframe=timeframe;
-
-      //--------------------------------------------------
-      // EMA20
-      //--------------------------------------------------
-
-      if(!m_ema20.Initialize(
-            m_symbol,
-            m_timeframe,
-            20))
+      if(!m_ema20.Initialize(symbol,timeframe,20))
          return false;
 
-      //--------------------------------------------------
-      // EMA50
-      //--------------------------------------------------
-
-      if(!m_ema50.Initialize(
-            m_symbol,
-            m_timeframe,
-            50))
+      if(!m_ema50.Initialize(symbol,timeframe,50))
          return false;
 
-      //--------------------------------------------------
-      // ATR14
-      //--------------------------------------------------
-
-      if(!m_atr.Initialize(
-            m_symbol,
-            m_timeframe,
-            14))
+      if(!m_atr14.Initialize(symbol,timeframe,14))
          return false;
 
-      //--------------------------------------------------
-      // ADX14
-      //--------------------------------------------------
-
-      if(!m_adx.Initialize(
-            m_symbol,
-            m_timeframe,
-            14))
+      if(!m_adx14.Initialize(symbol,timeframe,14))
          return false;
 
-      Print("Indicators inicializado correctamente.");
+      Print("Indicators inicializado.");
 
       return true;
    }
 
    //--------------------------------------------------
-   // Update
+   // Actualizar
    //--------------------------------------------------
 
-   void Update()
+   bool Update()
    {
-      m_ema20.Update();
-      m_ema50.Update();
+      bool ok=true;
 
-      m_atr.Update();
+      ok &= m_ema20.Update();
+      ok &= m_ema50.Update();
+      ok &= m_atr14.Update();
+      ok &= m_adx14.Update();
 
-      m_adx.Update();
+      return ok;
    }
 
    //--------------------------------------------------
@@ -117,54 +84,50 @@ public:
    {
       m_ema20.Shutdown();
       m_ema50.Shutdown();
-
-      m_atr.Shutdown();
-
-      m_adx.Shutdown();
-
-      Print("Indicators detenido.");
+      m_atr14.Shutdown();
+      m_adx14.Shutdown();
    }
 
    //--------------------------------------------------
    // EMA
    //--------------------------------------------------
 
-   double EMA20(int shift=0)
+   double EMA20() const
    {
-      return m_ema20.Value(shift);
+      return m_ema20.Value();
    }
 
-   double EMA50(int shift=0)
+   double EMA50() const
    {
-      return m_ema50.Value(shift);
+      return m_ema50.Value();
    }
 
    //--------------------------------------------------
    // ATR
    //--------------------------------------------------
 
-   double ATR(int shift=0)
+   double ATR() const
    {
-      return m_atr.Value(shift);
+      return m_atr14.Value();
    }
 
    //--------------------------------------------------
    // ADX
    //--------------------------------------------------
 
-   double ADX(int shift=0)
+   double ADX() const
    {
-      return m_adx.ADX(shift);
+      return m_adx14.ADX();
    }
 
-   double PlusDI(int shift=0)
+   double PlusDI() const
    {
-      return m_adx.PlusDI(shift);
+      return m_adx14.PlusDI();
    }
 
-   double MinusDI(int shift=0)
+   double MinusDI() const
    {
-      return m_adx.MinusDI(shift);
+      return m_adx14.MinusDI();
    }
 
 };
