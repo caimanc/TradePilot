@@ -16,6 +16,7 @@
 #include "../MarketAnalysis/TP_MarketStructure.mqh"
 #include "../MarketAnalysis/TP_StructureAnalyzer.mqh"
 #include "../MarketAnalysis/TP_StopLossCalculator.mqh"
+#include "../MarketAnalysis/TP_SetupValidator.mqh"
 
 #include "../MarketState/TP_MarketState.mqh"
 
@@ -82,6 +83,13 @@ private:
    //==================================================
 
    CTPStopLossCalculator m_stopLossCalculator;
+
+
+   //==================================================
+   // Validador de setups
+   //==================================================
+
+   CTPSetupValidator m_setupValidator;
 
 
    //==================================================
@@ -227,6 +235,17 @@ public:
             2.0))
       {
          Print("ERROR inicializando StopLossCalculator.");
+         return false;
+      }
+
+
+      //--------------------------------------------------
+      // Setup Validator
+      //--------------------------------------------------
+
+      if(!m_setupValidator.Initialize())
+      {
+         Print("ERROR inicializando SetupValidator.");
          return false;
       }
 
@@ -464,6 +483,20 @@ public:
                point);
       }
 
+
+      //==================================================
+      // SETUP VALIDATION
+      //==================================================
+
+      m_setupValidator.Evaluate(
+         buySLCalculated,
+         buyPoints,
+         sellSLCalculated,
+         sellPoints,
+         atr / point,
+         m_market.Spread(),
+         SymbolInfoInteger(m_config.Symbol(), SYMBOL_TRADE_STOPS_LEVEL)
+      );
 
       //==================================================
       // MARKET STATE
@@ -853,6 +886,12 @@ public:
       //--------------------------------------------------
 
       m_stopLossCalculator.Shutdown();
+
+      //--------------------------------------------------
+      // Setup Validator
+      //--------------------------------------------------
+
+      m_setupValidator.Shutdown();
 
 
       //--------------------------------------------------
