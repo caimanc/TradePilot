@@ -17,6 +17,7 @@
 #include "../MarketAnalysis/TP_StructureAnalyzer.mqh"
 #include "../MarketAnalysis/TP_StopLossCalculator.mqh"
 #include "../MarketAnalysis/TP_SetupValidator.mqh"
+#include "../MarketAnalysis/TP_TakeProfitCalculator.mqh"
 
 #include "../MarketState/TP_MarketState.mqh"
 
@@ -90,6 +91,13 @@ private:
    //==================================================
 
    CTPSetupValidator m_setupValidator;
+
+
+   //==================================================
+   // Calculadora de take profit
+   //==================================================
+
+   CTPTakeProfitCalculator m_takeProfitCalculator;
 
 
    //==================================================
@@ -246,6 +254,13 @@ public:
       if(!m_setupValidator.Initialize())
       {
          Print("ERROR inicializando SetupValidator.");
+         return false;
+      }
+
+
+      if(!m_takeProfitCalculator.Initialize())
+      {
+         Print("ERROR inicializando TakeProfitCalculator.");
          return false;
       }
 
@@ -485,6 +500,26 @@ public:
 
 
       //==================================================
+      // TAKE PROFIT
+      //==================================================
+
+      m_takeProfitCalculator.Calculate(
+         buySLCalculated,
+         buyEntry,
+         buyDistance,
+         sellSLCalculated,
+         sellEntry,
+         sellDistance
+      );
+
+      double buyTP =
+         m_takeProfitCalculator.BuyTakeProfit();
+
+      double sellTP =
+         m_takeProfitCalculator.SellTakeProfit();
+
+
+      //==================================================
       // SETUP VALIDATION
       //==================================================
 
@@ -537,7 +572,9 @@ public:
          m_signalManager,
          m_riskManager,
          buySL,
-         sellSL
+         sellSL,
+         buyTP,
+         sellTP
       );
 
 
@@ -902,6 +939,8 @@ public:
       //--------------------------------------------------
 
       m_setupValidator.Shutdown();
+
+      m_takeProfitCalculator.Shutdown();
 
 
       //--------------------------------------------------

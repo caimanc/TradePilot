@@ -45,7 +45,9 @@ public:
       const CTPSignalManager &signals,
       CTPRiskManager &risk,
       double buySL,
-      double sellSL)
+      double sellSL,
+      double buyTP,
+      double sellTP)
    {
       //--------------------------------------------------
       // Ya existe una posición
@@ -83,11 +85,22 @@ public:
             return false;
          }
 
+         //--------------------------------------------------
+         // Fail-safe: sin TP estructural no se envía la orden
+         //--------------------------------------------------
+
+         if(buyTP <= 0.0)
+         {
+            Print("ORDEN BLOQUEADA: TP estructural inválido para BUY (", buyTP, ").");
+
+            return false;
+         }
+
          bool ok =
             m_execution.Buy(
                risk.Volume(),
                buySL,
-               0.0);
+               buyTP);
 
          if(ok)
             risk.RegisterTrade();
@@ -114,11 +127,22 @@ public:
             return false;
          }
 
+         //--------------------------------------------------
+         // Fail-safe: sin TP estructural no se envía la orden
+         //--------------------------------------------------
+
+         if(sellTP <= 0.0)
+         {
+            Print("ORDEN BLOQUEADA: TP estructural inválido para SELL (", sellTP, ").");
+
+            return false;
+         }
+
          bool ok =
             m_execution.Sell(
                risk.Volume(),
                sellSL,
-               0.0);
+               sellTP);
 
          if(ok)
             risk.RegisterTrade();
