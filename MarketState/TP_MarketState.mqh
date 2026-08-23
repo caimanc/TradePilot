@@ -11,7 +11,6 @@ private:
    bool   m_bullTrend;
    bool   m_bearTrend;
    bool   m_range;
-   bool   m_highVolatility;
 
    bool   m_buySetupValid;
    bool   m_sellSetupValid;
@@ -39,7 +38,6 @@ public:
       m_bullTrend      = false;
       m_bearTrend      = false;
       m_range          = true;
-      m_highVolatility = false;
 
       m_buySetupValid  = false;
       m_sellSetupValid = false;
@@ -64,12 +62,6 @@ public:
 
       m_trendStrength = adx;
       m_volatility    = atr;
-
-      //--------------------------------------------------
-      // Volatilidad
-      //--------------------------------------------------
-
-      m_highVolatility = (atr >= 10.0);
 
       //--------------------------------------------------
       // Mercado lateral
@@ -137,11 +129,6 @@ public:
    bool IsRange() const
    {
       return m_range;
-   }
-
-   bool IsHighVolatility() const
-   {
-      return m_highVolatility;
    }
 
    bool IsBuySetupValid() const
