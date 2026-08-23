@@ -17,6 +17,7 @@
 #include "../MarketAnalysis/TP_StructureAnalyzer.mqh"
 #include "../MarketAnalysis/TP_StopLossCalculator.mqh"
 #include "../MarketAnalysis/TP_SetupValidator.mqh"
+#include "../MarketAnalysis/TP_SetupProfiles.mqh"
 #include "../MarketAnalysis/TP_TakeProfitCalculator.mqh"
 
 #include "../MarketState/TP_MarketState.mqh"
@@ -251,7 +252,15 @@ public:
       // Setup Validator
       //--------------------------------------------------
 
-      if(!m_setupValidator.Initialize())
+      TPSetupProfile perfilSetup;
+
+      ObtenerPerfil(
+         m_config.Timeframe(),
+         perfilSetup);
+
+      if(!m_setupValidator.Initialize(
+            perfilSetup.minSLPoints,
+            perfilSetup.maxSLPoints))
       {
          Print("ERROR inicializando SetupValidator.");
          return false;
