@@ -28,11 +28,17 @@ public:
    {
       Reset();
 
-      if(marketState.IsBullTrend())
+      if(marketState.IsBullTrend() &&
+         marketState.IsBuySetupValid())
+      {
          m_buy = true;
+      }
 
-      if(marketState.IsBearTrend())
+      if(marketState.IsBearTrend() &&
+         marketState.IsSellSetupValid())
+      {
          m_sell = true;
+      }
 
       return true;
    }
