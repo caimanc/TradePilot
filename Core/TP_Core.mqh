@@ -527,7 +527,9 @@ public:
 
       m_tradeManager.Update(
          m_signalManager,
-         m_riskManager
+         m_riskManager,
+         buySL,
+         sellSL
       );
 
 

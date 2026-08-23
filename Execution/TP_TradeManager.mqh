@@ -43,7 +43,9 @@ public:
 
    bool Update(
       const CTPSignalManager &signals,
-      CTPRiskManager &risk)
+      CTPRiskManager &risk,
+      double buySL,
+      double sellSL)
    {
       //--------------------------------------------------
       // Ya existe una posición
@@ -70,11 +72,22 @@ public:
       {
          Print(">>> BUY SIGNAL");
 
+         //--------------------------------------------------
+         // Fail-safe: sin SL estructural no se envía la orden
+         //--------------------------------------------------
+
+         if(buySL <= 0.0)
+         {
+            Print("ORDEN BLOQUEADA: SL estructural inválido para BUY (", buySL, ").");
+
+            return false;
+         }
+
          bool ok =
             m_execution.Buy(
                risk.Volume(),
-               risk.StopLoss(),
-               risk.TakeProfit());
+               buySL,
+               0.0);
 
          if(ok)
             risk.RegisterTrade();
@@ -90,11 +103,22 @@ public:
       {
          Print(">>> SELL SIGNAL");
 
+         //--------------------------------------------------
+         // Fail-safe: sin SL estructural no se envía la orden
+         //--------------------------------------------------
+
+         if(sellSL <= 0.0)
+         {
+            Print("ORDEN BLOQUEADA: SL estructural inválido para SELL (", sellSL, ").");
+
+            return false;
+         }
+
          bool ok =
             m_execution.Sell(
                risk.Volume(),
-               risk.StopLoss(),
-               risk.TakeProfit());
+               sellSL,
+               0.0);
 
          if(ok)
             risk.RegisterTrade();

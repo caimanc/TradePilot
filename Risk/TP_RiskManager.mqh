@@ -26,13 +26,6 @@ private:
    int    m_tradeCount;
    int    m_maxTrades;
 
-   //--------------------------------------------------
-   // SL / TP (temporales)
-   //--------------------------------------------------
-
-   double m_stopLoss;
-   double m_takeProfit;
-
 public:
 
    //--------------------------------------------------
@@ -46,9 +39,6 @@ public:
 
       m_tradeCount = 0;
       m_maxTrades = 5;
-
-      m_stopLoss = 0.0;
-      m_takeProfit = 0.0;
    }
 
    //--------------------------------------------------
@@ -72,10 +62,6 @@ public:
    void Update()
    {
       m_positionSizer.Calculate();
-
-      // Más adelante:
-      // StopLossCalculator
-      // TakeProfitCalculator
    }
 
    //--------------------------------------------------
@@ -109,16 +95,6 @@ public:
    double Volume() const
    {
       return m_positionSizer.Volume();
-   }
-
-   double StopLoss() const
-   {
-      return m_stopLoss;
-   }
-
-   double TakeProfit() const
-   {
-      return m_takeProfit;
    }
 
    //--------------------------------------------------
