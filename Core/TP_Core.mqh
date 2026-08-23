@@ -511,6 +511,14 @@ public:
          m_indicators.ATR()
       );
 
+      m_marketState.SetBuySetupValid(
+         m_setupValidator.BuySetupValid()
+      );
+
+      m_marketState.SetSellSetupValid(
+         m_setupValidator.SellSetupValid()
+      );
+
 
       //==================================================
       // SIGNAL MANAGER

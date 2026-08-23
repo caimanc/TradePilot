@@ -13,6 +13,9 @@ private:
    bool   m_range;
    bool   m_highVolatility;
 
+   bool   m_buySetupValid;
+   bool   m_sellSetupValid;
+
    double m_trendStrength;
    double m_volatility;
 
@@ -37,6 +40,9 @@ public:
       m_bearTrend      = false;
       m_range          = true;
       m_highVolatility = false;
+
+      m_buySetupValid  = false;
+      m_sellSetupValid = false;
 
       m_trendStrength  = 0.0;
       m_volatility     = 0.0;
@@ -101,6 +107,20 @@ public:
    }
 
    //--------------------------------------------------
+   // Veredictos de validación de setup
+   //--------------------------------------------------
+
+   void SetBuySetupValid(bool valid)
+   {
+      m_buySetupValid = valid;
+   }
+
+   void SetSellSetupValid(bool valid)
+   {
+      m_sellSetupValid = valid;
+   }
+
+   //--------------------------------------------------
    // Getters
    //--------------------------------------------------
 
@@ -122,6 +142,16 @@ public:
    bool IsHighVolatility() const
    {
       return m_highVolatility;
+   }
+
+   bool IsBuySetupValid() const
+   {
+      return m_buySetupValid;
+   }
+
+   bool IsSellSetupValid() const
+   {
+      return m_sellSetupValid;
    }
 
    double TrendStrength() const
