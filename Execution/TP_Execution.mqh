@@ -29,6 +29,47 @@ public:
    }
 
    //--------------------------------------------------
+   // Validar SL contra restricciones del bróker
+   // antes de abrir la posición
+   //--------------------------------------------------
+
+   bool ValidarSLParaApertura(bool esCompra, double sl)
+   {
+      if(sl <= 0.0)
+      {
+         Print("ORDEN BLOQUEADA: SL inválido (", sl, ").");
+
+         return false;
+      }
+
+      double punto =
+         SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+
+      double precioReferencia = esCompra ?
+         SymbolInfoDouble(_Symbol, SYMBOL_BID) :
+         SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+
+      double stopsLevel =
+         (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * punto;
+      double freezeLevel =
+         (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL) * punto;
+
+      double distancia = MathAbs(precioReferencia - sl);
+
+      if(distancia < stopsLevel || distancia < freezeLevel)
+      {
+         Print(
+            "ORDEN BLOQUEADA: SL a ", distancia / punto,
+            " puntos del mercado (mínimo del bróker: ",
+            MathMax(stopsLevel, freezeLevel) / punto, " puntos).");
+
+         return false;
+      }
+
+      return true;
+   }
+
+   //--------------------------------------------------
    // BUY
    //--------------------------------------------------
 
@@ -38,6 +79,9 @@ public:
       double tp,
       string comment = "TradePilot BUY")
    {
+      if(!ValidarSLParaApertura(true, sl))
+         return false;
+
       bool result =
          m_trade.Buy(
             volume,
@@ -48,9 +92,11 @@ public:
             comment);
 
       if(result)
-         Print("BUY ejecutado correctamente.");
+         Print("BUY ejecutado. Ticket=", m_trade.ResultOrder(),
+               " Retcode=", m_trade.ResultRetcode());
       else
-         Print("ERROR BUY: ", GetLastError());
+         Print("ERROR BUY: Retcode=", m_trade.ResultRetcode(),
+               " (", m_trade.ResultRetcodeDescription(), ")");
 
       return result;
    }
@@ -65,6 +111,9 @@ public:
       double tp,
       string comment = "TradePilot SELL")
    {
+      if(!ValidarSLParaApertura(false, sl))
+         return false;
+
       bool result =
          m_trade.Sell(
             volume,
@@ -75,9 +124,11 @@ public:
             comment);
 
       if(result)
-         Print("SELL ejecutado correctamente.");
+         Print("SELL ejecutado. Ticket=", m_trade.ResultOrder(),
+               " Retcode=", m_trade.ResultRetcode());
       else
-         Print("ERROR SELL: ", GetLastError());
+         Print("ERROR SELL: Retcode=", m_trade.ResultRetcode(),
+               " (", m_trade.ResultRetcodeDescription(), ")");
 
       return result;
    }
