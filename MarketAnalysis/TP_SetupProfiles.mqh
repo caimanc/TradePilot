@@ -9,8 +9,11 @@
 //| (spread vivo idéntico en todo TF; múltiplos son ratios):         |
 //| NO viven en este módulo.                                         |
 //|                                                                  |
-//| Valores v1 ESTIMADOS (base M1 = defaults históricos del EA);     |
-//| calibrar con datos reales de Demo por temporalidad.              |
+//| Valores v2 calibrados con datos reales de Demo XAUUSD:           |
+//| caps ~p85-p90 de distancias estructurales coherentes con ATR.    |
+//| M1: 24-ago (n=63, p50=1680, p90=3481).                           |
+//| M5: 25-ago (n=131, p50=1153, p90=2057).                          |
+//| M15/H1: extrapolados sin muestras propias aun.                   |
 //+------------------------------------------------------------------+
 struct TPSetupProfile
 {
@@ -30,34 +33,34 @@ void ObtenerPerfil(
 {
    if(timeframe >= PERIOD_H1)
    {
-      perfil.minSLPoints = 250.0;
-      perfil.maxSLPoints = 2400.0;
+      perfil.minSLPoints = 300.0;
+      perfil.maxSLPoints = 4000.0;
 
       return;
    }
 
    if(timeframe >= PERIOD_M15)
    {
-      perfil.minSLPoints = 120.0;
-      perfil.maxSLPoints = 1600.0;
+      perfil.minSLPoints = 150.0;
+      perfil.maxSLPoints = 2800.0;
 
       return;
    }
 
    if(timeframe >= PERIOD_M5)
    {
-      perfil.minSLPoints = 75.0;
-      perfil.maxSLPoints = 1000.0;
+      perfil.minSLPoints = 100.0;
+      perfil.maxSLPoints = 2000.0;
 
       return;
    }
 
    //--------------------------------------------------
-   // M1 y menores: defaults históricos del EA
+   // M1 y menores
    //--------------------------------------------------
 
-   perfil.minSLPoints = 30.0;
-   perfil.maxSLPoints = 400.0;
+   perfil.minSLPoints = 50.0;
+   perfil.maxSLPoints = 2500.0;
 }
 
 #endif
