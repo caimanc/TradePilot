@@ -26,6 +26,7 @@
 #include "../Signals/TP_SignalManager.mqh"
 
 #include "../Risk/TP_RiskManager.mqh"
+#include "../UI/TP_Panel.mqh"
 
 #include "../Execution/TP_TradeManager.mqh"
 
@@ -102,6 +103,8 @@ private:
    CTPTakeProfitCalculator m_takeProfitCalculator;
 
    CTPHTFContext m_htfContext;
+
+   CTPPanel m_panel;
 
 
    //==================================================
@@ -283,6 +286,18 @@ public:
          return false;
       }
 
+      if(!m_panel.Initialize(
+            m_config.Symbol(),
+            EnumToString(m_config.Timeframe()),
+            StringFormat("%.0f/%.0f",
+               perfilSetup.minSLPoints,
+               perfilSetup.maxSLPoints),
+            EnumToString(ObtenerHTF(m_config.Timeframe()))))
+      {
+         Print("ERROR inicializando Panel.");
+         return false;
+      }
+
 
       if(!m_takeProfitCalculator.Initialize())
       {
@@ -337,6 +352,11 @@ public:
    {
       if(!m_initialized)
          return;
+
+      m_panel.Update(
+         m_marketState,
+         m_riskManager
+      );
 
 
       //==================================================
@@ -1044,6 +1064,8 @@ public:
       m_indicators.Shutdown();
 
       m_htfContext.Shutdown();
+
+      m_panel.Shutdown();
 
 
       //--------------------------------------------------
