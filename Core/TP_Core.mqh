@@ -278,7 +278,8 @@ public:
       // Risk Manager
       //--------------------------------------------------
 
-      if(!m_riskManager.Initialize())
+      if(!m_riskManager.Initialize(
+            m_config.MagicNumber()))
       {
          Print("ERROR inicializando RiskManager.");
          return false;
