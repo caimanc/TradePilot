@@ -19,6 +19,7 @@
 #include "../MarketAnalysis/TP_SetupValidator.mqh"
 #include "../MarketAnalysis/TP_SetupProfiles.mqh"
 #include "../MarketAnalysis/TP_TakeProfitCalculator.mqh"
+#include "../MarketAnalysis/TP_HTFContext.mqh"
 
 #include "../MarketState/TP_MarketState.mqh"
 
@@ -99,6 +100,8 @@ private:
    //==================================================
 
    CTPTakeProfitCalculator m_takeProfitCalculator;
+
+   CTPHTFContext m_htfContext;
 
 
    //==================================================
@@ -198,6 +201,19 @@ public:
             m_config.Timeframe()))
       {
          Print("ERROR inicializando Indicators.");
+         return false;
+      }
+
+
+      //--------------------------------------------------
+      // HTF Context
+      //--------------------------------------------------
+
+      if(!m_htfContext.Initialize(
+            m_config.Symbol(),
+            ObtenerHTF(m_config.Timeframe())))
+      {
+         Print("ERROR inicializando HTF Context.");
          return false;
       }
 
@@ -555,6 +571,15 @@ public:
          m_indicators.MinusDI(),
          m_indicators.ATR()
       );
+
+      if(!m_htfContext.Update())
+         return;
+
+      m_marketState.SetHtfBull(
+         m_htfContext.IsBull());
+
+      m_marketState.SetHtfBear(
+         m_htfContext.IsBear());
 
       m_marketState.SetBuySetupValid(
          m_setupValidator.BuySetupValid()
@@ -979,6 +1004,8 @@ public:
       //--------------------------------------------------
 
       m_indicators.Shutdown();
+
+      m_htfContext.Shutdown();
 
 
       //--------------------------------------------------
