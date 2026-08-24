@@ -15,6 +15,9 @@ private:
    bool   m_buySetupValid;
    bool   m_sellSetupValid;
 
+   bool   m_htfBull;
+   bool   m_htfBear;
+
    double m_trendStrength;
    double m_volatility;
 
@@ -41,6 +44,9 @@ public:
 
       m_buySetupValid  = false;
       m_sellSetupValid = false;
+
+      m_htfBull        = false;
+      m_htfBear        = false;
 
       m_trendStrength  = 0.0;
       m_volatility     = 0.0;
@@ -113,6 +119,20 @@ public:
    }
 
    //--------------------------------------------------
+   // Veredictos de sesgo del tf superior
+   //--------------------------------------------------
+
+   void SetHtfBull(bool bull)
+   {
+      m_htfBull = bull;
+   }
+
+   void SetHtfBear(bool bear)
+   {
+      m_htfBear = bear;
+   }
+
+   //--------------------------------------------------
    // Getters
    //--------------------------------------------------
 
@@ -139,6 +159,16 @@ public:
    bool IsSellSetupValid() const
    {
       return m_sellSetupValid;
+   }
+
+   bool IsHtfBull() const
+   {
+      return m_htfBull;
+   }
+
+   bool IsHtfBear() const
+   {
+      return m_htfBear;
    }
 
    double TrendStrength() const
