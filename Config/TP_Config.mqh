@@ -24,7 +24,7 @@ public:
    CTPConfig()
    {
       m_symbol       = _Symbol;
-      m_timeframe    = PERIOD_CURRENT;
+      m_timeframe    = Period();
 
       m_magicNumber  = 20260724;
 
