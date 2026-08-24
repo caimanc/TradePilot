@@ -598,6 +598,30 @@ public:
          m_marketState
       );
 
+      //--------------------------------------------------
+      // Telemetria: causa del bloqueo de senales
+      //--------------------------------------------------
+
+      if(m_marketState.IsBuySetupValid() &&
+         !m_signalManager.Buy())
+      {
+         if(!m_marketState.IsBullTrend())
+            Print("SEÑAL BUY BLOQUEADA [TENDENCIA LTF]");
+
+         else if(!m_marketState.IsHtfBull())
+            Print("SEÑAL BUY BLOQUEADA [SESGO HTF]");
+      }
+
+      if(m_marketState.IsSellSetupValid() &&
+         !m_signalManager.Sell())
+      {
+         if(!m_marketState.IsBearTrend())
+            Print("SEÑAL SELL BLOQUEADA [TENDENCIA LTF]");
+
+         else if(!m_marketState.IsHtfBear())
+            Print("SEÑAL SELL BLOQUEADA [SESGO HTF]");
+      }
+
 
       //==================================================
       // TRADE MANAGER
