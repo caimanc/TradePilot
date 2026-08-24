@@ -2,6 +2,9 @@
 #define __TP_HTFCONTEXT_MQH__
 
 #include "../Indicators/TP_Indicators.mqh"
+#include "../Market/TP_PriceSeries.mqh"
+#include "TP_SwingDetector.mqh"
+#include "TP_MarketStructure.mqh"
 
 //+------------------------------------------------------------------+
 //| Contexto de temporalidad superior                                |
@@ -15,6 +18,12 @@ private:
    ENUM_TIMEFRAMES m_htf;
 
    CTPIndicators   m_indicators;
+
+   CTPPriceSeries  m_precios;
+
+   CTPSwingDetector m_swings;
+
+   CTPMarketStructure m_estructura;
 
    datetime        m_lastBarTime;
 
@@ -53,6 +62,15 @@ public:
       m_bear = false;
 
       if(!m_indicators.Initialize(symbol, htf))
+         return false;
+
+      if(!m_precios.Initialize(symbol, htf))
+         return false;
+
+      if(!m_swings.Initialize(2))
+         return false;
+
+      if(!m_estructura.Initialize())
          return false;
 
       Print("HTF Context inicializado.");
@@ -97,16 +115,46 @@ public:
       bool bearAntes = m_bear;
 
       //--------------------------------------------------
-      // Misma semantica de tendencia que MarketState
+      // Estructura propia del tf superior
       //--------------------------------------------------
 
-      m_bull = ema20 > ema50 &&
-               plusDI > minusDI &&
-               adx >= 20.0;
+      if(m_precios.Update() &&
+         m_swings.Update(m_precios))
+      {
+         m_estructura.SetATR(
+            m_indicators.ATR());
 
-      m_bear = ema20 < ema50 &&
-               minusDI > plusDI &&
-               adx >= 20.0;
+         m_estructura.Update(m_swings);
+      }
+
+      //--------------------------------------------------
+      // Misma semantica de tendencia que MarketState
+      // confirmada con estructura del propio HTF
+      //--------------------------------------------------
+
+      bool tendenciaAlcista =
+         ema20 > ema50 &&
+         plusDI > minusDI &&
+         adx >= 20.0;
+
+      bool tendenciaBajista =
+         ema20 < ema50 &&
+         minusDI > plusDI &&
+         adx >= 20.0;
+
+      bool estructuraAlcista =
+         m_estructura.IsHigherHigh() ||
+         m_estructura.IsHigherLow();
+
+      bool estructuraBajista =
+         m_estructura.IsLowerHigh() ||
+         m_estructura.IsLowerLow();
+
+      m_bull = tendenciaAlcista &&
+               estructuraAlcista;
+
+      m_bear = tendenciaBajista &&
+               estructuraBajista;
 
       //--------------------------------------------------
       // Log solo cuando cambia el veredicto
@@ -137,6 +185,12 @@ public:
    void Shutdown()
    {
       m_indicators.Shutdown();
+
+      m_precios.Shutdown();
+
+      m_swings.Shutdown();
+
+      m_estructura.Shutdown();
    }
 
    //--------------------------------------------------
