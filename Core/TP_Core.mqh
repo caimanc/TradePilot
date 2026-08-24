@@ -148,7 +148,8 @@ public:
    // Inicialización
    //==================================================
 
-   bool Initialize()
+   bool Initialize(
+      double volumenManual = 0.0)
    {
       Print("====================================");
       Print("Inicializando TradePilot...");
@@ -295,7 +296,8 @@ public:
       //--------------------------------------------------
 
       if(!m_riskManager.Initialize(
-            m_config.MagicNumber()))
+            m_config.MagicNumber(),
+            volumenManual))
       {
          Print("ERROR inicializando RiskManager.");
          return false;
@@ -626,6 +628,18 @@ public:
       //==================================================
       // TRADE MANAGER
       //==================================================
+
+      //--------------------------------------------------
+      // Volumen final (auto requiere distancia real del SL)
+      //--------------------------------------------------
+
+      if(m_signalManager.Sell())
+         m_riskManager.CalcularVolumen(
+            sellSL - SymbolInfoDouble(m_config.Symbol(), SYMBOL_BID));
+
+      else if(m_signalManager.Buy())
+         m_riskManager.CalcularVolumen(
+            SymbolInfoDouble(m_config.Symbol(), SYMBOL_ASK) - buySL);
 
       m_tradeManager.Update(
          m_signalManager,

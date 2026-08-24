@@ -109,12 +109,17 @@ public:
    //--------------------------------------------------
 
    bool Initialize(
-      long magicNumber = 0)
+      long magicNumber = 0,
+      double volumenManual = 0.0)
    {
       if(!m_positionSizer.Initialize())
          return false;
 
       m_magicNumber = magicNumber;
+
+      m_positionSizer.SetVolumeOverride(
+         volumenManual
+      );
 
       Print("RiskManager inicializado.");
 
@@ -154,6 +159,44 @@ public:
       m_positionSizer.Calculate();
 
       m_dailyLoss = PerdidaDiariaRealizada();
+   }
+
+   //--------------------------------------------------
+   // Recalcular volumen con distancia real del SL
+   //--------------------------------------------------
+
+   void CalcularVolumen(double distanciaSLPrecio)
+   {
+      m_positionSizer.Calculate(distanciaSLPrecio);
+   }
+
+   //--------------------------------------------------
+   // Getters para el panel
+   //--------------------------------------------------
+
+   double DailyLoss() const
+   {
+      return m_dailyLoss;
+   }
+
+   double MaxDailyLoss() const
+   {
+      return m_maxDailyLoss;
+   }
+
+   int TradeCount() const
+   {
+      return m_tradeCount;
+   }
+
+   int MaxTrades() const
+   {
+      return m_maxTrades;
+   }
+
+   bool IsManualVolume() const
+   {
+      return m_positionSizer.IsManual();
    }
 
    //--------------------------------------------------

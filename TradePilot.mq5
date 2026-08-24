@@ -8,6 +8,12 @@
 #include "Core/TP_Core.mqh"
 
 //--------------------------------------------------
+// Volumen manual (0 = automatico por riesgo)
+//--------------------------------------------------
+
+input double InpVolumenManual = 0.0;
+
+//--------------------------------------------------
 // Instancia global del núcleo
 //--------------------------------------------------
 
@@ -22,7 +28,7 @@ int OnInit()
    Print("Iniciando TradePilot...");
    Print("======================================");
 
-   if(!g_core.Initialize())
+   if(!g_core.Initialize(InpVolumenManual))
    {
       Print("ERROR: No fue posible inicializar TradePilot.");
       return INIT_FAILED;
