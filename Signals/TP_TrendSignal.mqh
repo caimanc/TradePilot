@@ -29,13 +29,15 @@ public:
       Reset();
 
       if(marketState.IsBullTrend() &&
-         marketState.IsBuySetupValid())
+         marketState.IsBuySetupValid() &&
+         marketState.IsHtfBull())
       {
          m_buy = true;
       }
 
       if(marketState.IsBearTrend() &&
-         marketState.IsSellSetupValid())
+         marketState.IsSellSetupValid() &&
+         marketState.IsHtfBear())
       {
          m_sell = true;
       }
