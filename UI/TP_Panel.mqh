@@ -88,11 +88,25 @@ public:
       m_lineaTitulo =
          "TradePilot  " + simbolo + "  " + txtTF;
 
+      //--------------------------------------------------
+      // Quitar prefijo "PERIOD_" para lectura compacta
+      //--------------------------------------------------
+
+      string tfCorto   = txtTF;
+      string htfCorto  = txtHTF;
+
+      if(StringFind(tfCorto, "PERIOD_") == 0)
+         tfCorto = StringSubstr(tfCorto, 7);
+
+      if(StringFind(htfCorto, "PERIOD_") == 0)
+         htfCorto = StringSubstr(htfCorto, 7);
+
       m_lineaPerfil =
          "Perfil SL   : " + txtPerfil + " pts";
 
       m_lineaHTF =
-         "Contexto    : " + txtHTF;
+         "Contexto    : " + htfCorto +
+         "  [grafico " + tfCorto + "]";
 
       string fondo = m_prefijo + "FONDO";
 
