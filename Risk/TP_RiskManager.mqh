@@ -109,13 +109,18 @@ public:
    //--------------------------------------------------
 
    bool Initialize(
-      long magicNumber = 0,
-      double volumenManual = 0.0)
+      long   magicNumber  = 0,
+      double volumenManual = 0.0,
+      int    maxTrades     = 0,
+      double maxDailyLoss  = 50.0)
    {
       if(!m_positionSizer.Initialize())
          return false;
 
       m_magicNumber = magicNumber;
+
+      m_maxTrades    = maxTrades;
+      m_maxDailyLoss = maxDailyLoss;
 
       m_positionSizer.SetVolumeOverride(
          volumenManual
@@ -126,6 +131,17 @@ public:
       Print(
          "Magic Number    : ",
          m_magicNumber
+      );
+
+      Print(
+         "Max Trades      : ",
+         m_maxTrades == 0 ? "ILIMITADO" : IntegerToString(m_maxTrades)
+      );
+
+      Print(
+         "Max Perdida     : ",
+         DoubleToString(m_maxDailyLoss, 2),
+         " USD"
       );
 
       return true;
@@ -208,7 +224,7 @@ public:
       if(m_dailyLoss >= m_maxDailyLoss)
          return false;
 
-      if(m_tradeCount >= m_maxTrades)
+      if(m_maxTrades > 0 && m_tradeCount >= m_maxTrades)
          return false;
 
       return true;

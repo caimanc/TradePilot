@@ -14,6 +14,27 @@
 input double InpVolumenManual = 0.0;
 
 //--------------------------------------------------
+// Riesgo diario
+//--------------------------------------------------
+
+input int    InpMaxTrades    = 0;     // 0 = ilimitado
+input double InpMaxPerdida   = 50.0;  // perdida maxima diaria USD
+
+//--------------------------------------------------
+// Alerta sonora
+//--------------------------------------------------
+
+input bool   InpAlertaSonido = true;
+
+//--------------------------------------------------
+// Trailing de proteccion por ganancia
+//--------------------------------------------------
+
+input double InpTrailMinProfit        = 0.0;  // 0 = desactivado
+input double InpTrailBreakevenOffset  = 1.0;  // ganancia minima a proteger
+input double InpTrailStep             = 5.0;  // cada N dls, subir SL N dls
+
+//--------------------------------------------------
 // Instancia global del núcleo
 //--------------------------------------------------
 
@@ -28,7 +49,14 @@ int OnInit()
    Print("Iniciando TradePilot...");
    Print("======================================");
 
-   if(!g_core.Initialize(InpVolumenManual))
+   if(!g_core.Initialize(
+         InpVolumenManual,
+         InpMaxTrades,
+         InpMaxPerdida,
+         InpAlertaSonido,
+         InpTrailMinProfit,
+         InpTrailBreakevenOffset,
+         InpTrailStep))
    {
       Print("ERROR: No fue posible inicializar TradePilot.");
       return INIT_FAILED;

@@ -222,12 +222,32 @@ public:
          bool esCompra =
             PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
 
+         double entrada  = PositionGetDouble(POSITION_PRICE_OPEN);
+         double slActual = PositionGetDouble(POSITION_SL);
+
+         double profitActual = 0.0;
+
+         if(esCompra)
+            profitActual = SymbolInfoDouble(_Symbol, SYMBOL_BID) - entrada;
+         else
+            profitActual = entrada - SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+
          string txtPos =
             "Posicion    : " +
             (esCompra ? "BUY " : "SELL ") +
             DoubleToString(PositionGetDouble(POSITION_VOLUME), 2) +
             " @" +
-            DoubleToString(PositionGetDouble(POSITION_PRICE_OPEN), 2);
+            DoubleToString(entrada, 2);
+
+         if(slActual > 0.0)
+         {
+            double lockeProfit = esCompra
+               ? slActual - entrada
+               : entrada - slActual;
+
+            txtPos += "  Trail:" +
+               DoubleToString(lockeProfit, 2);
+         }
 
          Escribir(
             "POSICION",
@@ -268,15 +288,21 @@ public:
       // Trades del día
       //--------------------------------------------------
 
+      string maxTradesStr = (riskManager.MaxTrades() == 0)
+         ? "∞" : IntegerToString(riskManager.MaxTrades());
+
+      bool tradesBloqueado =
+         riskManager.MaxTrades() > 0 &&
+         riskManager.TradeCount() >= riskManager.MaxTrades();
+
       Escribir(
          "TRADES",
          StringFormat(
-            "Trades hoy  : %d / %d",
+            "Trades hoy  : %d / %s",
             riskManager.TradeCount(),
-            riskManager.MaxTrades()
+            maxTradesStr
          ),
-         riskManager.TradeCount() >= riskManager.MaxTrades()
-            ? clrTomato : clrSilver
+         tradesBloqueado ? clrTomato : clrSilver
       );
 
       //--------------------------------------------------

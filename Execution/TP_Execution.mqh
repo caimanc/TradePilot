@@ -154,6 +154,29 @@ public:
 
       return result;
    }
+
+   //--------------------------------------------------
+   // Modificar SL de posición existente
+   //--------------------------------------------------
+
+   bool ModifySL(double newSL, double tp)
+   {
+      if(!PositionSelect(_Symbol))
+      {
+         Print("MODIFY: No hay posición abierta.");
+         return false;
+      }
+
+      bool result = m_trade.PositionModify(_Symbol, newSL, tp);
+
+      if(result)
+         Print("MODIFY SL: ", DoubleToString(newSL, 5), " OK");
+      else
+         Print("ERROR MODIFY: Retcode=", m_trade.ResultRetcode(),
+               " (", m_trade.ResultRetcodeDescription(), ")");
+
+      return result;
+   }
 };
 
 #endif

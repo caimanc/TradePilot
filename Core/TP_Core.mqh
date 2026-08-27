@@ -152,7 +152,13 @@ public:
    //==================================================
 
    bool Initialize(
-      double volumenManual = 0.0)
+      double volumenManual     = 0.0,
+      int    maxTrades         = 0,
+      double maxPerdida        = 50.0,
+      bool   alertaSonido      = true,
+      double trailMinProfit    = 0.0,
+      double trailBreakevenOffset = 1.0,
+      double trailStep         = 5.0)
    {
       Print("====================================");
       Print("Inicializando TradePilot...");
@@ -312,7 +318,9 @@ public:
 
       if(!m_riskManager.Initialize(
             m_config.MagicNumber(),
-            volumenManual))
+            volumenManual,
+            maxTrades,
+            maxPerdida))
       {
          Print("ERROR inicializando RiskManager.");
          return false;
@@ -324,7 +332,11 @@ public:
       //--------------------------------------------------
 
       if(!m_tradeManager.Initialize(
-            m_config.MagicNumber()))
+            m_config.MagicNumber(),
+            alertaSonido,
+            trailMinProfit,
+            trailBreakevenOffset,
+            trailStep))
       {
          Print("ERROR inicializando TradeManager.");
          return false;
