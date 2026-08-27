@@ -32,7 +32,8 @@ input bool   InpAlertaSonido = true;
 
 input double InpTrailMinProfit        = 0.0;  // 0 = desactivado
 input double InpTrailBreakevenOffset  = 1.0;  // ganancia minima a proteger
-input double InpTrailStep             = 5.0;  // cada N dls, subir SL N dls
+input double InpTrailStep             = 5.0;  // cada N dls, evaluar trail
+input double InpTrailStepIncrease     = 5.0;  // subir SL N dls por step
 input bool   InpTrailTP               = true; // extender TP si tendencia continua
 
 //--------------------------------------------------
@@ -64,6 +65,7 @@ int OnInit()
          InpTrailMinProfit,
          InpTrailBreakevenOffset,
          InpTrailStep,
+         InpTrailStepIncrease,
          InpTrailTP,
          InpMaxSL))
    {

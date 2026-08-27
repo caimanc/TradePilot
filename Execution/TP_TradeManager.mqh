@@ -22,6 +22,7 @@ private:
    double m_trailMinProfit;
    double m_trailBreakevenOffset;
    double m_trailStep;
+   double m_trailStepIncrease;
    bool   m_trailTPEnabled;
    double m_maxSL;
 
@@ -76,7 +77,7 @@ private:
 
       double locked = m_trailBreakevenOffset +
          MathFloor((profitActual - m_trailMinProfit) / m_trailStep) *
-         m_trailStep;
+         m_trailStepIncrease;
 
       double newSL = 0.0;
       double newTP = 0.0;
@@ -93,7 +94,7 @@ private:
          {
             double extension =
                MathFloor((profitActual - m_trailMinProfit) / m_trailStep) *
-               m_trailStep;
+               m_trailStepIncrease;
 
             newTP = m_originalTP + extension;
          }
@@ -114,7 +115,7 @@ private:
          {
             double extension =
                MathFloor((profitActual - m_trailMinProfit) / m_trailStep) *
-               m_trailStep;
+               m_trailStepIncrease;
 
             newTP = m_originalTP - extension;
          }
@@ -208,6 +209,7 @@ public:
       m_trailMinProfit       = 0.0;
       m_trailBreakevenOffset = 1.0;
       m_trailStep            = 5.0;
+      m_trailStepIncrease    = 5.0;
       m_trailTPEnabled       = true;
       m_maxSL                = 0.0;
       m_originalTP           = 0.0;
@@ -224,6 +226,7 @@ public:
       double trailMinProfit     = 0.0,
       double trailBreakevenOffset = 1.0,
       double trailStep          = 5.0,
+      double trailStepIncrease  = 5.0,
       bool   trailTP            = true,
       double maxSL              = 0.0)
    {
@@ -233,6 +236,7 @@ public:
       m_trailMinProfit       = trailMinProfit;
       m_trailBreakevenOffset = trailBreakevenOffset;
       m_trailStep            = trailStep;
+      m_trailStepIncrease    = trailStepIncrease;
       m_trailTPEnabled       = trailTP;
       m_maxSL                = maxSL;
 
@@ -249,6 +253,8 @@ public:
                DoubleToString(m_trailBreakevenOffset, 2),
                " step=",
                DoubleToString(m_trailStep, 2),
+               " increase=",
+               DoubleToString(m_trailStepIncrease, 2),
                " TP=",
                (m_trailTPEnabled ? "SI" : "NO"));
       }

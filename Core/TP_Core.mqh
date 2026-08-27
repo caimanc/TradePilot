@@ -159,6 +159,7 @@ public:
       double trailMinProfit    = 0.0,
       double trailBreakevenOffset = 1.0,
       double trailStep         = 5.0,
+      double trailStepIncrease = 5.0,
       bool   trailTP           = true,
       double maxSL             = 0.0)
    {
@@ -339,6 +340,7 @@ public:
             trailMinProfit,
             trailBreakevenOffset,
             trailStep,
+            trailStepIncrease,
             trailTP,
             maxSL))
       {
