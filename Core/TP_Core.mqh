@@ -368,6 +368,24 @@ public:
          wSesion
       );
 
+      //--------------------------------------------------
+      // Offset UTC del broker (horas) para sesiones
+      //--------------------------------------------------
+
+      MqlDateTime tBroker;
+      MqlDateTime tGMT;
+
+      TimeToStruct(TimeCurrent(), tBroker);
+      TimeToStruct(TimeGMT(),     tGMT);
+
+      int brokerUtcOffset =
+         tBroker.hour - tGMT.hour;
+
+      if(brokerUtcOffset < -12) brokerUtcOffset += 24;
+      if(brokerUtcOffset >  12) brokerUtcOffset -= 24;
+
+      m_signalManager.SetScoreSessions(brokerUtcOffset);
+
 
       //--------------------------------------------------
       // Estado

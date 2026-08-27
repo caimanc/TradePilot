@@ -47,6 +47,15 @@ public:
    }
 
    //--------------------------------------------------
+   // Configurar sesiones del scoring
+   //--------------------------------------------------
+
+   void SetScoreSessions(int brokerUtcOffset)
+   {
+      m_probabilityScorer.SetSessions(brokerUtcOffset);
+   }
+
+   //--------------------------------------------------
    // Actualizar señales
    //--------------------------------------------------
 
@@ -97,6 +106,16 @@ public:
    bool ScoreEnabled() const
    {
       return m_probabilityScorer.Enabled();
+   }
+
+   double SesionFactor() const
+   {
+      return m_probabilityScorer.SesionFactor();
+   }
+
+   string SesionName() const
+   {
+      return m_probabilityScorer.SesionName();
    }
 
    //--------------------------------------------------
