@@ -23,6 +23,7 @@ private:
    double m_trailBreakevenOffset;
    double m_trailStep;
    bool   m_trailTPEnabled;
+   double m_maxSL;
 
    //--------------------------------------------------
    // TP original de la posicion actual
@@ -208,6 +209,7 @@ public:
       m_trailBreakevenOffset = 1.0;
       m_trailStep            = 5.0;
       m_trailTPEnabled       = true;
+      m_maxSL                = 0.0;
       m_originalTP           = 0.0;
       m_tpStored             = false;
    }
@@ -222,7 +224,8 @@ public:
       double trailMinProfit     = 0.0,
       double trailBreakevenOffset = 1.0,
       double trailStep          = 5.0,
-      bool   trailTP            = true)
+      bool   trailTP            = true,
+      double maxSL              = 0.0)
    {
       m_execution.SetMagicNumber(magicNumber);
 
@@ -231,6 +234,7 @@ public:
       m_trailBreakevenOffset = trailBreakevenOffset;
       m_trailStep            = trailStep;
       m_trailTPEnabled       = trailTP;
+      m_maxSL                = maxSL;
 
       m_originalTP = 0.0;
       m_tpStored   = false;
@@ -247,6 +251,13 @@ public:
                DoubleToString(m_trailStep, 2),
                " TP=",
                (m_trailTPEnabled ? "SI" : "NO"));
+      }
+
+      if(m_maxSL > 0.0)
+      {
+         Print("MaxSL activo: ",
+               DoubleToString(m_maxSL, 0),
+               " puntos");
       }
 
       return true;
@@ -321,6 +332,34 @@ public:
             return false;
          }
 
+         //--------------------------------------------------
+         // MaxSL: cap del SL si excede el limite
+         //--------------------------------------------------
+
+         if(m_maxSL > 0.0)
+         {
+            double entrada = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+            double punto   = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+            double distancia = (entrada - buySL) / punto;
+
+            if(distancia > m_maxSL)
+            {
+               double slOriginal = buySL;
+
+               buySL = entrada - m_maxSL * punto;
+
+               Print("MaxSL BUY: ",
+                     DoubleToString(distancia, 0),
+                     " pts → ",
+                     DoubleToString(m_maxSL, 0),
+                     " pts (",
+                     DoubleToString(slOriginal, 5),
+                     " → ",
+                     DoubleToString(buySL, 5),
+                     ")");
+            }
+         }
+
          bool ok =
             m_execution.Buy(
                risk.Volume(),
@@ -369,6 +408,34 @@ public:
             Print("ORDEN BLOQUEADA: TP estructural inválido para SELL (", sellTP, ").");
 
             return false;
+         }
+
+         //--------------------------------------------------
+         // MaxSL: cap del SL si excede el limite
+         //--------------------------------------------------
+
+         if(m_maxSL > 0.0)
+         {
+            double entrada = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+            double punto   = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+            double distancia = (sellSL - entrada) / punto;
+
+            if(distancia > m_maxSL)
+            {
+               double slOriginal = sellSL;
+
+               sellSL = entrada + m_maxSL * punto;
+
+               Print("MaxSL SELL: ",
+                     DoubleToString(distancia, 0),
+                     " pts → ",
+                     DoubleToString(m_maxSL, 0),
+                     " pts (",
+                     DoubleToString(slOriginal, 5),
+                     " → ",
+                     DoubleToString(sellSL, 5),
+                     ")");
+            }
          }
 
          bool ok =

@@ -36,6 +36,12 @@ input double InpTrailStep             = 5.0;  // cada N dls, subir SL N dls
 input bool   InpTrailTP               = true; // extender TP si tendencia continua
 
 //--------------------------------------------------
+// Limite de SL por operacion
+//--------------------------------------------------
+
+input double InpMaxSL = 0.0;  // 0 = valor calculado, >0 = maximo en puntos
+
+//--------------------------------------------------
 // Instancia global del núcleo
 //--------------------------------------------------
 
@@ -58,7 +64,8 @@ int OnInit()
          InpTrailMinProfit,
          InpTrailBreakevenOffset,
          InpTrailStep,
-         InpTrailTP))
+         InpTrailTP,
+         InpMaxSL))
    {
       Print("ERROR: No fue posible inicializar TradePilot.");
       return INIT_FAILED;
