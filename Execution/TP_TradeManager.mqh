@@ -255,9 +255,9 @@ public:
 
       if(m_maxSL > 0.0)
       {
-         Print("MaxSL activo: ",
-               DoubleToString(m_maxSL, 0),
-               " puntos");
+         Print("MaxSL activo: $",
+               DoubleToString(m_maxSL, 2),
+               " USD");
       }
 
       return true;
@@ -333,30 +333,43 @@ public:
          }
 
          //--------------------------------------------------
-         // MaxSL: cap del SL si excede el limite
+         // MaxSL: cap del SL si excede el limite (USD)
          //--------------------------------------------------
 
          if(m_maxSL > 0.0)
          {
-            double entrada = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-            double punto   = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
-            double distancia = (entrada - buySL) / punto;
+            double entrada  = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+            double punto    = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+            double tickSize = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+            double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+            double volumen  = risk.Volume();
 
-            if(distancia > m_maxSL)
+            if(tickSize > 0.0 && tickValue > 0.0 && volumen > 0.0)
             {
-               double slOriginal = buySL;
+               double distanciaPrecio = entrada - buySL;
 
-               buySL = entrada - m_maxSL * punto;
+               double perdidaUSD =
+                  distanciaPrecio / tickSize * volumen * tickValue;
 
-               Print("MaxSL BUY: ",
-                     DoubleToString(distancia, 0),
-                     " pts → ",
-                     DoubleToString(m_maxSL, 0),
-                     " pts (",
-                     DoubleToString(slOriginal, 5),
-                     " → ",
-                     DoubleToString(buySL, 5),
-                     ")");
+               if(perdidaUSD > m_maxSL)
+               {
+                  double nuevaDistancia =
+                     m_maxSL * tickSize / (volumen * tickValue);
+
+                  double slOriginal = buySL;
+
+                  buySL = entrada - nuevaDistancia;
+
+                  Print("MaxSL BUY: $",
+                        DoubleToString(perdidaUSD, 2),
+                        " → $",
+                        DoubleToString(m_maxSL, 2),
+                        " (",
+                        DoubleToString(slOriginal, 5),
+                        " → ",
+                        DoubleToString(buySL, 5),
+                        ")");
+               }
             }
          }
 
@@ -411,30 +424,43 @@ public:
          }
 
          //--------------------------------------------------
-         // MaxSL: cap del SL si excede el limite
+         // MaxSL: cap del SL si excede el limite (USD)
          //--------------------------------------------------
 
          if(m_maxSL > 0.0)
          {
-            double entrada = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-            double punto   = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
-            double distancia = (sellSL - entrada) / punto;
+            double entrada  = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+            double punto    = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+            double tickSize = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+            double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+            double volumen  = risk.Volume();
 
-            if(distancia > m_maxSL)
+            if(tickSize > 0.0 && tickValue > 0.0 && volumen > 0.0)
             {
-               double slOriginal = sellSL;
+               double distanciaPrecio = sellSL - entrada;
 
-               sellSL = entrada + m_maxSL * punto;
+               double perdidaUSD =
+                  distanciaPrecio / tickSize * volumen * tickValue;
 
-               Print("MaxSL SELL: ",
-                     DoubleToString(distancia, 0),
-                     " pts → ",
-                     DoubleToString(m_maxSL, 0),
-                     " pts (",
-                     DoubleToString(slOriginal, 5),
-                     " → ",
-                     DoubleToString(sellSL, 5),
-                     ")");
+               if(perdidaUSD > m_maxSL)
+               {
+                  double nuevaDistancia =
+                     m_maxSL * tickSize / (volumen * tickValue);
+
+                  double slOriginal = sellSL;
+
+                  sellSL = entrada + nuevaDistancia;
+
+                  Print("MaxSL SELL: $",
+                        DoubleToString(perdidaUSD, 2),
+                        " → $",
+                        DoubleToString(m_maxSL, 2),
+                        " (",
+                        DoubleToString(slOriginal, 5),
+                        " → ",
+                        DoubleToString(sellSL, 5),
+                        ")");
+               }
             }
          }
 

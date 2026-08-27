@@ -241,12 +241,21 @@ public:
 
          if(slActual > 0.0)
          {
-            double lockeProfit = esCompra
+            double volumen = PositionGetDouble(POSITION_VOLUME);
+            double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+            double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+
+            double distancia = esCompra
                ? slActual - entrada
                : entrada - slActual;
 
-            txtPos += "  Trail:" +
-               DoubleToString(lockeProfit, 2);
+            double lockeUSD = 0.0;
+
+            if(tickSize > 0.0 && tickValue > 0.0 && volumen > 0.0)
+               lockeUSD = distancia / tickSize * volumen * tickValue;
+
+            txtPos += "  Trail:$" +
+               DoubleToString(lockeUSD, 2);
          }
 
          Escribir(

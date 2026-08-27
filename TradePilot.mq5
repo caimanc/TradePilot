@@ -39,7 +39,7 @@ input bool   InpTrailTP               = true; // extender TP si tendencia contin
 // Limite de SL por operacion
 //--------------------------------------------------
 
-input double InpMaxSL = 0.0;  // 0 = valor calculado, >0 = maximo en puntos
+input double InpMaxSL = 0.0;  // 0 = valor calculado, >0 = maximo en USD
 
 //--------------------------------------------------
 // Instancia global del núcleo
