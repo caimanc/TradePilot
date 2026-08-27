@@ -185,6 +185,25 @@ public:
 
 
       //--------------------------------------------------
+      // Guard anti duplicados (multi-instancia)
+      //--------------------------------------------------
+
+      string nombreGlobal = NombreGlobal();
+
+      if(GlobalVariableCheck(nombreGlobal))
+      {
+         Print("BLOQUEADO: ya existe otra instancia de TradePilot ",
+               "para ", m_config.Symbol(),
+               " con magic ", m_config.MagicNumber(),
+               ". Cierra la instancia duplicada.");
+
+         return false;
+      }
+
+      GlobalVariableSet(nombreGlobal, 0.0);
+
+
+      //--------------------------------------------------
       // Market
       //--------------------------------------------------
 
@@ -1081,12 +1100,23 @@ public:
    // Shutdown
    //==================================================
 
+   //--------------------------------------------------
+   // Nombre de la variable global anti duplicados
+   //--------------------------------------------------
+
+   string NombreGlobal() const
+   {
+      return StringFormat(
+         "TP_%s_%I64d",
+         m_config.Symbol(),
+         m_config.MagicNumber()
+      );
+   }
+
    void Shutdown()
    {
       if(!m_initialized)
          return;
-
-
       Print("====================================");
       Print("Cerrando TradePilot...");
       Print("====================================");
