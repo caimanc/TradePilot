@@ -116,7 +116,7 @@ public:
       ObjectSetInteger(0, fondo, OBJPROP_XDISTANCE, 8);
       ObjectSetInteger(0, fondo, OBJPROP_YDISTANCE, 18);
       ObjectSetInteger(0, fondo, OBJPROP_XSIZE, 300);
-      ObjectSetInteger(0, fondo, OBJPROP_YSIZE, 196);
+      ObjectSetInteger(0, fondo, OBJPROP_YSIZE, 214);
       ObjectSetInteger(0, fondo, OBJPROP_BGCOLOR, C'20,24,30');
       ObjectSetInteger(0, fondo, OBJPROP_COLOR, C'70,80,95');
       ObjectSetInteger(0, fondo, OBJPROP_BACK, false);
@@ -129,6 +129,7 @@ public:
       CrearEtiqueta("HTF",      16, fila,        clrSilver);      fila += 18;
       CrearEtiqueta("TENDENCIA",16, fila,        clrSilver);      fila += 18;
       CrearEtiqueta("SETUP",    16, fila,        clrSilver);      fila += 18;
+      CrearEtiqueta("PROB",     16, fila,        clrSilver);      fila += 18;
       CrearEtiqueta("POSICION", 16, fila,        clrSilver);      fila += 18;
       CrearEtiqueta("RIESGO",   16, fila,        clrSilver);      fila += 18;
       CrearEtiqueta("TRADES",   16, fila,        clrSilver);      fila += 18;
@@ -145,7 +146,11 @@ public:
 
    void Update(
       const CTPMarketState &marketState,
-      const CTPRiskManager &riskManager)
+      const CTPRiskManager &riskManager,
+      double probBuy  = 0.0,
+      double probSell = 0.0,
+      double scoreThreshold = 0.0,
+      bool   scoreEnabled    = false)
    {
       //--------------------------------------------------
       // Contexto HTF
@@ -212,6 +217,40 @@ public:
          marketState.IsSellSetupValid() ? clrTomato : clrSilver;
 
       Escribir("SETUP", txtSetup, clrSetup);
+
+      //--------------------------------------------------
+      // Capa de probabilidad (scoring)
+      //--------------------------------------------------
+
+      string txtProb;
+
+      if(scoreEnabled)
+      {
+         txtProb = StringFormat(
+            "Probabilidad: BUY %.0f%% SELL %.0f%% (min %.0f)",
+            probBuy,
+            probSell,
+            scoreThreshold
+         );
+      }
+      else
+      {
+         txtProb = StringFormat(
+            "Probabilidad: BUY %.0f%% SELL %.0f%% (off)",
+            probBuy,
+            probSell
+         );
+      }
+
+      color clrProb = clrSilver;
+
+      if(scoreEnabled)
+      {
+         clrProb = (probBuy >= scoreThreshold ||
+                    probSell >= scoreThreshold) ? clrLime : clrOrange;
+      }
+
+      Escribir("PROB", txtProb, clrProb);
 
       //--------------------------------------------------
       // Posición abierta (lectura directa del terminal)

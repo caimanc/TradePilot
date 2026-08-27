@@ -23,6 +23,8 @@
 
 #include "../MarketState/TP_MarketState.mqh"
 
+#include "../Scoring/TP_ProbabilityScorer.mqh"
+
 #include "../Signals/TP_SignalManager.mqh"
 
 #include "../Risk/TP_RiskManager.mqh"
@@ -161,7 +163,12 @@ public:
       double trailStep         = 5.0,
       double trailStepIncrease = 5.0,
       bool   trailTP           = true,
-      double maxSL             = 0.0)
+      double maxSL             = 0.0,
+      double scoreThreshold    = 0.0,
+      double wTendencia        = 1.0,
+      double wHtf              = 1.0,
+      double wSetup            = 1.0,
+      double wSesion           = 0.0)
    {
       Print("====================================");
       Print("Inicializando TradePilot...");
@@ -350,6 +357,19 @@ public:
 
 
       //--------------------------------------------------
+      // Capa de probabilidad (scoring)
+      //--------------------------------------------------
+
+      m_signalManager.SetScoreParams(
+         scoreThreshold,
+         wTendencia,
+         wHtf,
+         wSetup,
+         wSesion
+      );
+
+
+      //--------------------------------------------------
       // Estado
       //--------------------------------------------------
 
@@ -373,7 +393,11 @@ public:
 
       m_panel.Update(
          m_marketState,
-         m_riskManager
+         m_riskManager,
+         m_signalManager.BuyProbability(),
+         m_signalManager.SellProbability(),
+         m_signalManager.ScoreThreshold(),
+         m_signalManager.ScoreEnabled()
       );
 
 

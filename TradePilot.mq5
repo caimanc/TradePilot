@@ -43,6 +43,17 @@ input bool   InpTrailTP               = true; // extender TP si tendencia contin
 input double InpMaxSL = 0.0;  // 0 = valor calculado, >0 = maximo en USD
 
 //--------------------------------------------------
+// Capa de probabilidad (scoring ponderado)
+// 0.0 = desactivado (comportamiento clasico booleano)
+//--------------------------------------------------
+
+input double InpScoreThreshold = 0.0;  // probabilidad minima % para senalar
+input double InpW_Tendencia    = 1.0;  // peso de la tendencia local
+input double InpW_Htf          = 1.0;  // peso del sesgo del tf superior
+input double InpW_Setup        = 1.0;  // peso del setup estructural
+input double InpW_Sesion       = 0.0;  // peso de la ventana de sesion
+
+//--------------------------------------------------
 // Instancia global del núcleo
 //--------------------------------------------------
 
@@ -67,7 +78,12 @@ int OnInit()
          InpTrailStep,
          InpTrailStepIncrease,
          InpTrailTP,
-         InpMaxSL))
+         InpMaxSL,
+         InpScoreThreshold,
+         InpW_Tendencia,
+         InpW_Htf,
+         InpW_Setup,
+         InpW_Sesion))
    {
       Print("ERROR: No fue posible inicializar TradePilot.");
       return INIT_FAILED;

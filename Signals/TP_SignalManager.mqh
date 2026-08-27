@@ -3,6 +3,7 @@
 
 #include "TP_TrendSignal.mqh"
 #include "../MarketState/TP_MarketState.mqh"
+#include "../Scoring/TP_ProbabilityScorer.mqh"
 
 //+------------------------------------------------------------------+
 //| Administrador de señales                                         |
@@ -12,6 +13,8 @@ class CTPSignalManager
 private:
 
    CTPTrendSignal m_trendSignal;
+
+   CTPProbabilityScorer m_probabilityScorer;
 
 public:
 
@@ -24,12 +27,36 @@ public:
    }
 
    //--------------------------------------------------
+   // Configurar capa de probabilidad
+   //--------------------------------------------------
+
+   void SetScoreParams(
+      double threshold,
+      double wTendencia,
+      double wHtf,
+      double wSetup,
+      double wSesion)
+   {
+      m_probabilityScorer.SetParams(
+         threshold,
+         wTendencia,
+         wHtf,
+         wSetup,
+         wSesion
+      );
+   }
+
+   //--------------------------------------------------
    // Actualizar señales
    //--------------------------------------------------
 
    bool Update(const CTPMarketState &marketState)
    {
-      return m_trendSignal.Update(marketState);
+      bool ok = m_trendSignal.Update(marketState);
+
+      m_probabilityScorer.Update(marketState);
+
+      return ok;
    }
 
    //--------------------------------------------------
@@ -38,12 +65,38 @@ public:
 
    bool Buy() const
    {
-      return m_trendSignal.Buy();
+      return m_trendSignal.Buy() &&
+             m_probabilityScorer.Buy();
    }
 
    bool Sell() const
    {
-      return m_trendSignal.Sell();
+      return m_trendSignal.Sell() &&
+             m_probabilityScorer.Sell();
+   }
+
+   //--------------------------------------------------
+   // Probabilidades para el panel
+   //--------------------------------------------------
+
+   double BuyProbability() const
+   {
+      return m_probabilityScorer.BuyProbability();
+   }
+
+   double SellProbability() const
+   {
+      return m_probabilityScorer.SellProbability();
+   }
+
+   double ScoreThreshold() const
+   {
+      return m_probabilityScorer.Threshold();
+   }
+
+   bool ScoreEnabled() const
+   {
+      return m_probabilityScorer.Enabled();
    }
 
    //--------------------------------------------------
