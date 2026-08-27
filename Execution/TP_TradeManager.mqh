@@ -22,6 +22,14 @@ private:
    double m_trailMinProfit;
    double m_trailBreakevenOffset;
    double m_trailStep;
+   bool   m_trailTPEnabled;
+
+   //--------------------------------------------------
+   // TP original de la posicion actual
+   //--------------------------------------------------
+
+   double m_originalTP;
+   bool   m_tpStored;
 
    //--------------------------------------------------
    // Trailing logic
@@ -39,6 +47,17 @@ private:
 
       double entrada  = PositionGetDouble(POSITION_PRICE_OPEN);
       double slActual = PositionGetDouble(POSITION_SL);
+      double tpActual = PositionGetDouble(POSITION_TP);
+
+      //--------------------------------------------------
+      // Guardar TP original la primera vez
+      //--------------------------------------------------
+
+      if(!m_tpStored && tpActual > 0.0)
+      {
+         m_originalTP = tpActual;
+         m_tpStored   = true;
+      }
 
       double profitActual = 0.0;
 
@@ -59,21 +78,70 @@ private:
          m_trailStep;
 
       double newSL = 0.0;
+      double newTP = 0.0;
 
       if(tipo == POSITION_TYPE_BUY)
+      {
          newSL = entrada + locked;
+
+         //--------------------------------------------------
+         // TP se extiende si la tendencia continua
+         //--------------------------------------------------
+
+         if(m_trailTPEnabled && m_originalTP > 0.0)
+         {
+            double extension =
+               MathFloor((profitActual - m_trailMinProfit) / m_trailStep) *
+               m_trailStep;
+
+            newTP = m_originalTP + extension;
+         }
+         else
+         {
+            newTP = tpActual;
+         }
+      }
       else
+      {
          newSL = entrada - locked;
 
+         //--------------------------------------------------
+         // TP se extiende si la tendencia continua
+         //--------------------------------------------------
+
+         if(m_trailTPEnabled && m_originalTP > 0.0)
+         {
+            double extension =
+               MathFloor((profitActual - m_trailMinProfit) / m_trailStep) *
+               m_trailStep;
+
+            newTP = m_originalTP - extension;
+         }
+         else
+         {
+            newTP = tpActual;
+         }
+      }
+
       //--------------------------------------------------
-      // Guard: solo mejorar, nunca retroceder
+      // Guard: solo mejorar SL, nunca retroceder
       //--------------------------------------------------
 
       if(tipo == POSITION_TYPE_BUY && newSL <= slActual)
-         return;
+         newSL = slActual;
 
       if(tipo == POSITION_TYPE_SELL && newSL >= slActual)
-         return;
+         newSL = slActual;
+
+      //--------------------------------------------------
+      // Guard: solo extender TP, nunca reducir
+      //--------------------------------------------------
+
+      if(tipo == POSITION_TYPE_BUY && newTP <= tpActual)
+         newTP = tpActual;
+
+      if(tipo == POSITION_TYPE_SELL && newTP >= tpActual)
+         newTP = tpActual;
 
       //--------------------------------------------------
       // Guard: respetar stops level del broker
@@ -93,21 +161,37 @@ private:
          : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
 
       if(MathAbs(precioReferencia - newSL) < minDist)
-         return;
+         newSL = slActual;
+
+      if(MathAbs(precioReferencia - newTP) < minDist)
+         newTP = tpActual;
 
       //--------------------------------------------------
-      // Ejecutar modificacion
+      // Ejecutar modificacion solo si algo cambio
       //--------------------------------------------------
 
-      double tpActual = PositionGetDouble(POSITION_TP);
-
-      if(m_execution.ModifySL(newSL, tpActual))
+      if(newSL != slActual || newTP != tpActual)
       {
-         Print("TRAILING: SL movido a ",
-               DoubleToString(newSL, 5),
-               " (protege ",
-               DoubleToString(locked, 2),
-               " USD)");
+         if(m_execution.ModifySL(newSL, newTP))
+         {
+            if(newSL != slActual)
+            {
+               Print("TRAILING SL: movido a ",
+                     DoubleToString(newSL, 5),
+                     " (protege ",
+                     DoubleToString(locked, 2),
+                     " USD)");
+            }
+
+            if(newTP != tpActual)
+            {
+               Print("TRAILING TP: extendido a ",
+                     DoubleToString(newTP, 5),
+                     " (extension ",
+                     DoubleToString(MathAbs(newTP - m_originalTP), 2),
+                     " USD)");
+            }
+         }
       }
    }
 
@@ -119,10 +203,13 @@ public:
 
    CTPTradeManager()
    {
-      m_alertaSonido        = true;
-      m_trailMinProfit      = 0.0;
+      m_alertaSonido         = true;
+      m_trailMinProfit       = 0.0;
       m_trailBreakevenOffset = 1.0;
-      m_trailStep           = 5.0;
+      m_trailStep            = 5.0;
+      m_trailTPEnabled       = true;
+      m_originalTP           = 0.0;
+      m_tpStored             = false;
    }
 
    //--------------------------------------------------
@@ -134,7 +221,8 @@ public:
       bool   alertaSonido       = true,
       double trailMinProfit     = 0.0,
       double trailBreakevenOffset = 1.0,
-      double trailStep          = 5.0)
+      double trailStep          = 5.0,
+      bool   trailTP            = true)
    {
       m_execution.SetMagicNumber(magicNumber);
 
@@ -142,6 +230,10 @@ public:
       m_trailMinProfit       = trailMinProfit;
       m_trailBreakevenOffset = trailBreakevenOffset;
       m_trailStep            = trailStep;
+      m_trailTPEnabled       = trailTP;
+
+      m_originalTP = 0.0;
+      m_tpStored   = false;
 
       Print("TradeManager inicializado.");
 
@@ -152,7 +244,9 @@ public:
                " offset=",
                DoubleToString(m_trailBreakevenOffset, 2),
                " step=",
-               DoubleToString(m_trailStep, 2));
+               DoubleToString(m_trailStep, 2),
+               " TP=",
+               (m_trailTPEnabled ? "SI" : "NO"));
       }
 
       return true;
@@ -179,6 +273,13 @@ public:
          TrailingGanancia();
          return true;
       }
+
+      //--------------------------------------------------
+      // No hay posición: resetear estado del trailing TP
+      //--------------------------------------------------
+
+      m_tpStored  = false;
+      m_originalTP = 0.0;
 
       //--------------------------------------------------
       // Validar riesgo

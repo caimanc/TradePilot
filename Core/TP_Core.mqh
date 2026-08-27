@@ -158,7 +158,8 @@ public:
       bool   alertaSonido      = true,
       double trailMinProfit    = 0.0,
       double trailBreakevenOffset = 1.0,
-      double trailStep         = 5.0)
+      double trailStep         = 5.0,
+      bool   trailTP           = true)
    {
       Print("====================================");
       Print("Inicializando TradePilot...");
@@ -336,7 +337,8 @@ public:
             alertaSonido,
             trailMinProfit,
             trailBreakevenOffset,
-            trailStep))
+            trailStep,
+            trailTP))
       {
          Print("ERROR inicializando TradeManager.");
          return false;

@@ -33,6 +33,7 @@ input bool   InpAlertaSonido = true;
 input double InpTrailMinProfit        = 0.0;  // 0 = desactivado
 input double InpTrailBreakevenOffset  = 1.0;  // ganancia minima a proteger
 input double InpTrailStep             = 5.0;  // cada N dls, subir SL N dls
+input bool   InpTrailTP               = true; // extender TP si tendencia continua
 
 //--------------------------------------------------
 // Instancia global del núcleo
@@ -56,7 +57,8 @@ int OnInit()
          InpAlertaSonido,
          InpTrailMinProfit,
          InpTrailBreakevenOffset,
-         InpTrailStep))
+         InpTrailStep,
+         InpTrailTP))
    {
       Print("ERROR: No fue posible inicializar TradePilot.");
       return INIT_FAILED;
