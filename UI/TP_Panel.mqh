@@ -116,7 +116,7 @@ public:
       ObjectSetInteger(0, fondo, OBJPROP_XDISTANCE, 8);
       ObjectSetInteger(0, fondo, OBJPROP_YDISTANCE, 18);
       ObjectSetInteger(0, fondo, OBJPROP_XSIZE, 300);
-      ObjectSetInteger(0, fondo, OBJPROP_YSIZE, 214);
+      ObjectSetInteger(0, fondo, OBJPROP_YSIZE, 250);
       ObjectSetInteger(0, fondo, OBJPROP_BGCOLOR, C'20,24,30');
       ObjectSetInteger(0, fondo, OBJPROP_COLOR, C'70,80,95');
       ObjectSetInteger(0, fondo, OBJPROP_BACK, false);
@@ -133,7 +133,9 @@ public:
       CrearEtiqueta("POSICION", 16, fila,        clrSilver);      fila += 18;
       CrearEtiqueta("RIESGO",   16, fila,        clrSilver);      fila += 18;
       CrearEtiqueta("TRADES",   16, fila,        clrSilver);      fila += 18;
-      CrearEtiqueta("VOLUMEN",  16, fila,        clrSilver);
+      CrearEtiqueta("VOLUMEN",  16, fila,        clrSilver);      fila += 18;
+      CrearEtiqueta("EVAL",     16, fila,        clrSilver);      fila += 18;
+      CrearEtiqueta("SESION",   16, fila,        clrSilver);
 
       Print("Panel inicializado.");
 
@@ -150,7 +152,11 @@ public:
       double probBuy  = 0.0,
       double probSell = 0.0,
       double scoreThreshold = 0.0,
-      bool   scoreEnabled    = false)
+      bool   scoreEnabled    = false,
+      string sesionName      = "",
+      double sesionFactor    = 0.0,
+      int    senalesEvaluadas  = 0,
+      int    senalesEjecutadas = 0)
    {
       //--------------------------------------------------
       // Contexto HTF
@@ -370,6 +376,49 @@ public:
          txtVol,
          riskManager.IsManualVolume() ? clrGold : clrSilver
       );
+
+      //--------------------------------------------------
+      // Funnel de señales (evaluadas vs ejecutadas)
+      //--------------------------------------------------
+
+      Escribir(
+         "EVAL",
+         StringFormat(
+            "Señales     : eval %d / ejec %d",
+            senalesEvaluadas,
+            senalesEjecutadas
+         ),
+         (senalesEvaluadas > 0 &&
+          senalesEjecutadas == 0) ? clrOrange : clrSilver
+      );
+
+      //--------------------------------------------------
+      // Sesión y factor de ponderación
+      //--------------------------------------------------
+
+      string txtSesion;
+
+      if(sesionName == "")
+      {
+         txtSesion = "Sesion      : --";
+      }
+      else
+      {
+         txtSesion = StringFormat(
+            "Sesion      : %s  (f %.2f)",
+            sesionName,
+            sesionFactor
+         );
+      }
+
+      color clrSesion = clrSilver;
+
+      if(sesionFactor <= 0.0)
+         clrSesion = clrDimGray;
+      else if(sesionFactor >= 0.75)
+         clrSesion = clrGold;
+
+      Escribir("SESION", txtSesion, clrSesion);
 
       ChartRedraw();
    }

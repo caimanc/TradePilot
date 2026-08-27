@@ -48,6 +48,9 @@ private:
 
    bool m_initialized;
 
+   int  m_senalesEvaluadas;
+   int  m_senalesEjecutadas;
+
 
    //==================================================
    // Configuración
@@ -155,6 +158,9 @@ public:
    CTPCore()
    {
       m_initialized = false;
+
+      m_senalesEvaluadas  = 0;
+      m_senalesEjecutadas = 0;
    }
 
 
@@ -452,7 +458,11 @@ public:
          m_signalManager.BuyProbability(),
          m_signalManager.SellProbability(),
          m_signalManager.ScoreThreshold(),
-         m_signalManager.ScoreEnabled()
+         m_signalManager.ScoreEnabled(),
+         m_signalManager.SesionName(),
+         m_signalManager.SesionFactor(),
+         m_senalesEvaluadas,
+         m_senalesEjecutadas
       );
 
 
@@ -740,6 +750,16 @@ public:
          else if(!m_marketState.IsHtfBear())
             Print("SEÑAL SELL BLOQUEADA [SESGO HTF]");
       }
+
+
+      //--------------------------------------------------
+      // Contadores de evaluacion (funnel)
+      //--------------------------------------------------
+
+      if(m_signalManager.Buy() || m_signalManager.Sell())
+         m_senalesEvaluadas++;
+
+      m_senalesEjecutadas = m_monitor.Ejecutadas();
 
 
       //==================================================
