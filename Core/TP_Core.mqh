@@ -32,6 +32,8 @@
 
 #include "../Execution/TP_TradeManager.mqh"
 
+#include "../Market/TP_Monitor.mqh"
+
 
 //+------------------------------------------------------------------+
 //| Núcleo principal                                                 |
@@ -135,6 +137,13 @@ private:
    //==================================================
 
    CTPTradeManager m_tradeManager;
+
+
+   //==================================================
+   // Monitor (telemetría + noticias)
+   //==================================================
+
+   CTPMonitor m_monitor;
 
 
 public:
@@ -354,6 +363,15 @@ public:
          Print("ERROR inicializando TradeManager.");
          return false;
       }
+
+
+      //--------------------------------------------------
+      // Monitor (telemetría + noticias)
+      //--------------------------------------------------
+
+      m_monitor.Initialize(
+         m_config.MagicNumber()
+      );
 
 
       //--------------------------------------------------
@@ -729,6 +747,13 @@ public:
          buyTP,
          sellTP
       );
+
+
+      //--------------------------------------------------
+      // Monitor de operaciones (telemetría + noticias)
+      //--------------------------------------------------
+
+      m_monitor.Update();
 
 
       //==================================================
