@@ -12,11 +12,13 @@ class CTPExecution
 private:
 
    CTrade m_trade;
+   long   m_magic;
 
 public:
 
    CTPExecution()
    {
+      m_magic = 0;
    }
 
    //--------------------------------------------------
@@ -25,6 +27,7 @@ public:
 
    void SetMagicNumber(long magic)
    {
+      m_magic = magic;
       m_trade.SetExpertMagicNumber(magic);
    }
 
@@ -151,6 +154,43 @@ public:
          Print("Posición cerrada correctamente.");
       else
          Print("ERROR CLOSE: ", GetLastError());
+
+      return result;
+   }
+
+   //--------------------------------------------------
+   // Cerrar posición por ticket (solo posición propia)
+   // Re-verifica magic y símbolo ANTES de cerrar:
+   // nunca asumir la correspondencia del ticket.
+   //--------------------------------------------------
+
+   bool CloseByTicket(ulong ticket)
+   {
+      if(!PositionSelectByTicket(ticket))
+      {
+         Print("CLOSE: posición ticket ", ticket, " no encontrada.");
+         return false;
+      }
+
+      long  posMagic   = PositionGetInteger(POSITION_MAGIC);
+      string posSymbol = PositionGetString(POSITION_SYMBOL);
+
+      if(posMagic != m_magic || posSymbol != _Symbol)
+      {
+         Print("CLOSE BLOQUEADO: ticket ", ticket,
+               " no es posición propia (magic=", posMagic,
+               " símbolo=", posSymbol, ").");
+         return false;
+      }
+
+      bool result = m_trade.PositionClose(ticket);
+
+      if(result)
+         Print("CLOSE ticket ", ticket, " cerrado correctamente.");
+      else
+         Print("ERROR CLOSE ticket ", ticket,
+               ": Retcode=", m_trade.ResultRetcode(),
+               " (", m_trade.ResultRetcodeDescription(), ")");
 
       return result;
    }

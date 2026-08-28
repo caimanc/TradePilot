@@ -41,6 +41,44 @@ private:
    bool   m_logueadoUmbral;
 
    //--------------------------------------------------
+   // Magic de las posiciones propias del EA
+   //--------------------------------------------------
+
+   long   m_magicNumber;
+
+   //--------------------------------------------------
+   // Ticket de la posición propia en _Symbol
+   // (mismo patrón que Monitor: filtrar por magic + símbolo)
+   //--------------------------------------------------
+
+   ulong TicketPosicionPropia() const
+   {
+      int total = PositionsTotal();
+
+      for(int i = 0; i < total; i++)
+      {
+         ulong ticket = PositionGetTicket(i);
+
+         if(ticket == 0)
+            continue;
+
+         if(!PositionSelectByTicket(ticket))
+            continue;
+
+         long  posMagic   = PositionGetInteger(POSITION_MAGIC);
+         string posSymbol = PositionGetString(POSITION_SYMBOL);
+
+         if(posMagic == m_magicNumber &&
+            posSymbol == _Symbol)
+         {
+            return ticket;
+         }
+      }
+
+      return 0;
+   }
+
+   //--------------------------------------------------
    // Conversión USD <-> distancia de precio
    //--------------------------------------------------
 
@@ -313,8 +351,9 @@ public:
       m_maxSL                = 0.0;
       m_originalTP           = 0.0;
       m_tpStored             = false;
-      m_ultimoEscalonLog     = -1.0;
-      m_logueadoUmbral       = false;
+       m_ultimoEscalonLog     = -1.0;
+       m_logueadoUmbral       = false;
+       m_magicNumber          = 0;
    }
 
    //--------------------------------------------------
@@ -332,6 +371,7 @@ public:
       double maxSL              = 0.0)
    {
       m_execution.SetMagicNumber(magicNumber);
+      m_magicNumber = magicNumber;
 
       m_alertaSonido         = alertaSonido;
       m_trailMinProfit       = trailMinProfit;
