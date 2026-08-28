@@ -34,7 +34,33 @@ private:
    bool   m_tpStored;
 
    //--------------------------------------------------
-   // Trailing logic
+   // Conversión USD <-> distancia de precio
+   //--------------------------------------------------
+
+   double USDToPrecio(double usd, double volumen)
+   {
+      double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+      double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+
+      if(tickSize <= 0.0 || tickValue <= 0.0 || volumen <= 0.0)
+         return 0.0;
+
+      // distancia(precio) = usd * tickSize / (volumen * tickValue)
+      return usd * tickSize / (volumen * tickValue);
+   }
+
+   //--------------------------------------------------
+   // Ganancias en USD reales de la posición
+   //--------------------------------------------------
+
+   double ProfitEnUSD(bool esCompra)
+   {
+      // POSITION_PROFIT ya lo entrega el broker en USD de la divisa del depósito
+      return PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+   }
+
+   //--------------------------------------------------
+   // Trailing logic (trabaja en USD, no en puntos)
    //--------------------------------------------------
 
    void TrailingGanancia()
@@ -46,10 +72,12 @@ private:
          return;
 
       long tipo = PositionGetInteger(POSITION_TYPE);
+      bool esCompra = (tipo == POSITION_TYPE_BUY);
 
       double entrada  = PositionGetDouble(POSITION_PRICE_OPEN);
       double slActual = PositionGetDouble(POSITION_SL);
       double tpActual = PositionGetDouble(POSITION_TP);
+      double volumen  = PositionGetDouble(POSITION_VOLUME);
 
       //--------------------------------------------------
       // Guardar TP original la primera vez
@@ -61,30 +89,44 @@ private:
          m_tpStored   = true;
       }
 
-      double profitActual = 0.0;
+      //--------------------------------------------------
+      // Ganancia real en USD de la posición
+      //--------------------------------------------------
 
-      if(tipo == POSITION_TYPE_BUY)
-         profitActual = SymbolInfoDouble(_Symbol, SYMBOL_BID) - entrada;
-      else
-         profitActual = entrada - SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      double profitUSD = ProfitEnUSD(esCompra);
 
-      if(profitActual < m_trailMinProfit)
+      if(profitUSD < m_trailMinProfit)
          return;
 
       //--------------------------------------------------
-      // Calcular ganancia protegida
+      // Ganancia adicional sobre el mínimo (en USD)
       //--------------------------------------------------
 
-      double locked = m_trailBreakevenOffset +
-         MathFloor((profitActual - m_trailMinProfit) / m_trailStep) *
-         m_trailStepIncrease;
+      double extraUSD = profitUSD - m_trailMinProfit;
+
+      // Cuántos escalones completos de "step" se han superado
+      double escalones = MathFloor(extraUSD / m_trailStep);
+
+      // Ganancia protegida en USD:
+      //   offset + escalones * increase
+      double lockedUSD = m_trailBreakevenOffset +
+         escalones * m_trailStepIncrease;
+
+      //--------------------------------------------------
+      // Convertir la ganancia protegida (USD) a distancia de precio
+      //--------------------------------------------------
+
+      double lockedPrecio = USDToPrecio(lockedUSD, volumen);
+
+      if(lockedPrecio <= 0.0)
+         return;
 
       double newSL = 0.0;
       double newTP = 0.0;
 
-      if(tipo == POSITION_TYPE_BUY)
+      if(esCompra)
       {
-         newSL = entrada + locked;
+         newSL = entrada + lockedPrecio;
 
          //--------------------------------------------------
          // TP se extiende si la tendencia continua
@@ -92,11 +134,10 @@ private:
 
          if(m_trailTPEnabled && m_originalTP > 0.0)
          {
-            double extension =
-               MathFloor((profitActual - m_trailMinProfit) / m_trailStep) *
-               m_trailStepIncrease;
+            double extensionUSD = escalones * m_trailStepIncrease;
+            double extensionPrecio = USDToPrecio(extensionUSD, volumen);
 
-            newTP = m_originalTP + extension;
+            newTP = m_originalTP + extensionPrecio;
          }
          else
          {
@@ -105,7 +146,7 @@ private:
       }
       else
       {
-         newSL = entrada - locked;
+         newSL = entrada - lockedPrecio;
 
          //--------------------------------------------------
          // TP se extiende si la tendencia continua
@@ -113,11 +154,10 @@ private:
 
          if(m_trailTPEnabled && m_originalTP > 0.0)
          {
-            double extension =
-               MathFloor((profitActual - m_trailMinProfit) / m_trailStep) *
-               m_trailStepIncrease;
+            double extensionUSD = escalones * m_trailStepIncrease;
+            double extensionPrecio = USDToPrecio(extensionUSD, volumen);
 
-            newTP = m_originalTP - extension;
+            newTP = m_originalTP - extensionPrecio;
          }
          else
          {
@@ -129,20 +169,20 @@ private:
       // Guard: solo mejorar SL, nunca retroceder
       //--------------------------------------------------
 
-      if(tipo == POSITION_TYPE_BUY && newSL <= slActual)
+      if(esCompra && newSL <= slActual)
          newSL = slActual;
 
-      if(tipo == POSITION_TYPE_SELL && newSL >= slActual)
+      if(!esCompra && newSL >= slActual)
          newSL = slActual;
 
       //--------------------------------------------------
       // Guard: solo extender TP, nunca reducir
       //--------------------------------------------------
 
-      if(tipo == POSITION_TYPE_BUY && newTP <= tpActual)
+      if(esCompra && newTP <= tpActual)
          newTP = tpActual;
 
-      if(tipo == POSITION_TYPE_SELL && newTP >= tpActual)
+      if(!esCompra && newTP >= tpActual)
          newTP = tpActual;
 
       //--------------------------------------------------
@@ -158,7 +198,7 @@ private:
 
       double minDist = MathMax(stopsLevel, freezeLevel);
 
-      double precioReferencia = (tipo == POSITION_TYPE_BUY)
+      double precioReferencia = esCompra
          ? SymbolInfoDouble(_Symbol, SYMBOL_BID)
          : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
 
@@ -181,7 +221,9 @@ private:
                Print("TRAILING SL: movido a ",
                      DoubleToString(newSL, 5),
                      " (protege ",
-                     DoubleToString(locked, 2),
+                     DoubleToString(MathAbs(newSL - entrada), 5),
+                     " precio / ",
+                     DoubleToString(lockedUSD, 2),
                      " USD)");
             }
 
@@ -190,7 +232,9 @@ private:
                Print("TRAILING TP: extendido a ",
                      DoubleToString(newTP, 5),
                      " (extension ",
-                     DoubleToString(MathAbs(newTP - m_originalTP), 2),
+                     DoubleToString(MathAbs(newTP - m_originalTP), 5),
+                     " precio / ",
+                     DoubleToString(escalones * m_trailStepIncrease, 2),
                      " USD)");
             }
          }
