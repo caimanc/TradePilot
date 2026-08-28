@@ -34,6 +34,13 @@ private:
    bool   m_tpStored;
 
    //--------------------------------------------------
+   // Diagnostico: ultimo escalon logueado (evita spam)
+   //--------------------------------------------------
+
+   double m_ultimoEscalonLog;
+   bool   m_logueadoUmbral;
+
+   //--------------------------------------------------
    // Conversión USD <-> distancia de precio
    //--------------------------------------------------
 
@@ -96,7 +103,20 @@ private:
       double profitUSD = ProfitEnUSD(esCompra);
 
       if(profitUSD < m_trailMinProfit)
+      {
+         // Log solo la primera vez que deja de alcanzar el umbral
+         if(m_logueadoUmbral)
+         {
+            Print("TRAILING: ganancia ", DoubleToString(profitUSD, 2),
+                  " USD < min ", DoubleToString(m_trailMinProfit, 2),
+                  " USD -> proteccion desactivada (SL no movido)");
+            m_logueadoUmbral = false;
+         }
+
          return;
+      }
+
+      m_logueadoUmbral = true;
 
       //--------------------------------------------------
       // Ganancia adicional sobre el mínimo (en USD)
@@ -106,6 +126,21 @@ private:
 
       // Cuántos escalones completos de "step" se han superado
       double escalones = MathFloor(extraUSD / m_trailStep);
+
+      //--------------------------------------------------
+      // Log de diagnostico: solo cuando cambia el escalon
+      //--------------------------------------------------
+
+      if(escalones != m_ultimoEscalonLog)
+      {
+         Print("TRAILING: ganancia ", DoubleToString(profitUSD, 2),
+               " USD (extra ", DoubleToString(extraUSD, 2),
+               ") -> escalon ", DoubleToString(escalones, 0),
+               ", protege ", DoubleToString(
+                  m_trailBreakevenOffset + escalones * m_trailStepIncrease, 2),
+               " USD");
+         m_ultimoEscalonLog = escalones;
+      }
 
       // Ganancia protegida en USD:
       //   offset + escalones * increase
@@ -170,10 +205,20 @@ private:
       //--------------------------------------------------
 
       if(esCompra && newSL <= slActual)
+      {
+         Print("TRAILING: nuevo SL ", DoubleToString(newSL, 5),
+               " no mejora el actual ", DoubleToString(slActual, 5),
+               " -> sin movimiento (solo mejora)");
          newSL = slActual;
+      }
 
       if(!esCompra && newSL >= slActual)
+      {
+         Print("TRAILING: nuevo SL ", DoubleToString(newSL, 5),
+               " no mejora el actual ", DoubleToString(slActual, 5),
+               " -> sin movimiento (solo mejora)");
          newSL = slActual;
+      }
 
       //--------------------------------------------------
       // Guard: solo extender TP, nunca reducir
@@ -203,10 +248,20 @@ private:
          : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
 
       if(MathAbs(precioReferencia - newSL) < minDist)
+      {
+         Print("TRAILING: nuevo SL ", DoubleToString(newSL, 5),
+               " a menos de ", DoubleToString(minDist / punto, 2),
+               " puntos del mercado -> sin movimiento (stops level)");
          newSL = slActual;
+      }
 
       if(MathAbs(precioReferencia - newTP) < minDist)
+      {
+         Print("TRAILING: nuevo TP ", DoubleToString(newTP, 5),
+               " a menos de ", DoubleToString(minDist / punto, 2),
+               " puntos del mercado -> sin movimiento (stops level)");
          newTP = tpActual;
+      }
 
       //--------------------------------------------------
       // Ejecutar modificacion solo si algo cambio
@@ -258,6 +313,8 @@ public:
       m_maxSL                = 0.0;
       m_originalTP           = 0.0;
       m_tpStored             = false;
+      m_ultimoEscalonLog     = -1.0;
+      m_logueadoUmbral       = false;
    }
 
    //--------------------------------------------------
@@ -286,6 +343,8 @@ public:
 
       m_originalTP = 0.0;
       m_tpStored   = false;
+      m_ultimoEscalonLog = -1.0;
+      m_logueadoUmbral   = false;
 
       Print("TradeManager inicializado.");
 
