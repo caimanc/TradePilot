@@ -184,6 +184,26 @@ public:
    }
 
    //--------------------------------------------------
+   // Estado del patrón para el panel
+   //--------------------------------------------------
+
+   // Dirección del patrón detectado (0 neutra, 1 alcista, 2 bajista)
+   int PatronDireccion() const
+   {
+      return (int)m_patternDetector.Direccion();
+   }
+
+   string PatronMotivo() const
+   {
+      return m_patternDetector.Motivo();
+   }
+
+   bool PatronConfirmado() const
+   {
+      return m_patronAlc || m_patronBaj;
+   }
+
+   //--------------------------------------------------
    // Comment de la orden según la ruta activa
    // Vacío si NO abre la ruta del patrón
    //--------------------------------------------------

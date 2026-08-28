@@ -476,7 +476,10 @@ public:
          m_signalManager.SesionName(),
          m_signalManager.SesionFactor(),
          m_senalesEvaluadas,
-         m_senalesEjecutadas
+         m_senalesEjecutadas,
+         m_signalManager.UltimoPatron(),
+         m_signalManager.PatronDireccion(),
+         m_signalManager.PatronConfirmado()
       );
 
 
