@@ -175,6 +175,17 @@ public:
    }
 
    //--------------------------------------------------
+   // Freno de salida anticipada: interruptor del modo agotamiento
+   // (Maestro ∧ modo agotamiento activos). Controla el cierre por
+   // patrón contrario y por inversión de tendencia (freno mixto)
+   //--------------------------------------------------
+
+   bool SalidaPatronActiva() const
+   {
+      return m_salidaPatron;
+   }
+
+   //--------------------------------------------------
    // Nombre del patrón detectado (para alertas/comment)
    //--------------------------------------------------
 

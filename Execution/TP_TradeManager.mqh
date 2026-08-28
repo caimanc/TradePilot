@@ -4,6 +4,7 @@
 #include "TP_Execution.mqh"
 #include "../Signals/TP_SignalManager.mqh"
 #include "../Risk/TP_RiskManager.mqh"
+#include "../MarketState/TP_MarketState.mqh"
 
 //+------------------------------------------------------------------+
 //| Gestor de operaciones                                            |
@@ -434,6 +435,7 @@ public:
 
    bool Update(
       const CTPSignalManager &signals,
+      const CTPMarketState &marketState,
       CTPRiskManager &risk,
       double buySL,
       double sellSL,
@@ -457,15 +459,15 @@ public:
           {
              long tipo = PositionGetInteger(POSITION_TYPE);
 
-             bool agotamiento =
-                (tipo == POSITION_TYPE_BUY  && signals.PatronBajistaConfirmado()) ||
-                (tipo == POSITION_TYPE_SELL && signals.PatronAlcistaConfirmado());
+              bool agotamiento =
+                 (tipo == POSITION_TYPE_BUY  && signals.PatronBajistaConfirmado()) ||
+                 (tipo == POSITION_TYPE_SELL && signals.PatronAlcistaConfirmado());
 
-             if(agotamiento)
-             {
-                Print("SALIDA POR AGOTAMIENTO: patrón de ",
-                      signals.UltimoPatron(),
-                      " clausura dirección");
+              if(agotamiento)
+              {
+                 Print("SALIDA POR AGOTAMIENTO: patrón de ",
+                       signals.UltimoPatron(),
+                       " clausura dirección");
 
                  if(m_execution.CloseByTicket(propio))
                  {
@@ -476,7 +478,38 @@ public:
 
                  return true;   // sin trailing esta vela
               }
+
+              //--------------------------------------------------
+              // Freno mixto: inversión de dirección confirmada de la
+              // tendencia (modo 3). Complementa al agotamiento por patrón:
+              // detecta giros que NO forman patrón de vela contrario.
+              // Asume que el MarketState solo afirma tendencia con
+              // ADX>=20 + EMA20/50 + DMI alineados (filtro anti-whiplash),
+              // y exige que el TF superior no sostenga la dirección original.
+              //--------------------------------------------------
+
+              if(signals.SalidaPatronActiva())
+              {
+                 bool inversion =
+                    (tipo == POSITION_TYPE_BUY  && marketState.IsBearTrend() && !marketState.IsHtfBull()) ||
+                    (tipo == POSITION_TYPE_SELL && marketState.IsBullTrend() && !marketState.IsHtfBear());
+
+                 if(inversion)
+                 {
+                    Print("SALIDA POR INVERSIÓN: la tendencia giró en contra de la posición");
+
+                    if(m_execution.CloseByTicket(propio))
+                    {
+                       if(m_alertaSonido)
+                          Alert("TradePilot: posición cerrada por inversión de tendencia");
+                    }
+
+                    return true;   // sin trailing esta vela
+                 }
+              }
            }
+
+
 
            return true;   // posicion gestionada: trailing ya se evalua por tick
         }

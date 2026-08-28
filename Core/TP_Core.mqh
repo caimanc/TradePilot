@@ -806,6 +806,7 @@ public:
 
       m_tradeManager.Update(
          m_signalManager,
+         m_marketState,
          m_riskManager,
          buySL,
          sellSL,
