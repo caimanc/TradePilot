@@ -8,50 +8,72 @@
 #include "Core/TP_Core.mqh"
 
 //--------------------------------------------------
-// Volumen manual (0 = automatico por riesgo)
+// VOLUMEN DE APERTURA
+// Cantidad con la que abre cada operacion (en lotes).
+// 0 = automatico: calcula el lote segun el riesgo diario.
 //--------------------------------------------------
 
 input double InpVolumenManual = 0.0;
 
 //--------------------------------------------------
-// Riesgo diario
+// RIESGO DIARIO
+// Limites que protegen la cuenta dentro del dia.
 //--------------------------------------------------
 
-input int    InpMaxTrades    = 0;     // 0 = ilimitado
-input double InpMaxPerdida   = 50.0;  // perdida maxima diaria USD
+input int    InpMaxTrades    = 0;     // Maximo de operaciones al dia. 0 = sin limite
+input double InpMaxPerdida   = 50.0;  // Perdida maxima diaria en USD (detiene el EA)
 
 //--------------------------------------------------
-// Alerta sonora
+// ALERTA SONORA
+// Emite un sonido cuando el EA abre o cierra una operacion.
 //--------------------------------------------------
 
-input bool   InpAlertaSonido = true;
+input bool   InpAlertaSonido = true; // true = sonido activado, false = silencioso
 
 //--------------------------------------------------
-// Trailing de proteccion por ganancia
+// TRAILING DE GANANCIA (en USD reales)
+// El SL se mueve para asegurar ganancia cuando el beneficio crece.
+// Todos estos valores van en USD, NO en puntos.
+// MinProfit: ganancia minima para activar la proteccion.
+//   4  -> se activa cuando el beneficio llega a +4 USD
+// Offset: ganancia protegida al activarse.
+//   SL sube hasta proteger 2 USD.
+// Step: cada cuantos USD adicionales se reevalua.
+//   5  -> re-evalua cada +5 USD extra
+// Increase: cuanto sube el SL por cada escalon.
+//   +9 USD -> SL protegeria 4.5 USD; +14 -> 7 USD.
 //--------------------------------------------------
 
-input double InpTrailMinProfit        = 0.0;  // 0 = desactivado
-input double InpTrailBreakevenOffset  = 1.0;  // ganancia minima a proteger
-input double InpTrailStep             = 5.0;  // cada N dls, evaluar trail
-input double InpTrailStepIncrease     = 5.0;  // subir SL N dls por step
-input bool   InpTrailTP               = true; // extender TP si tendencia continua
+input double InpTrailMinProfit        = 0.0;  // Ganancia en USD para activar. 0 = desactivado
+input double InpTrailBreakevenOffset  = 1.0;  // USD que protege el SL al activarse
+input double InpTrailStep             = 5.0;  // Cada cuantos USD extra se reevalua
+input double InpTrailStepIncrease     = 5.0;  // En cuantos USD sube el SL por escalon
+input bool   InpTrailTP               = true; // true = extiende el TP con el SL, false = deja el TP fijo
 
 //--------------------------------------------------
-// Limite de SL por operacion
+// LIMITE DE SL POR OPERACION
+// Tope del stop loss en USD. El EA no dejara un SL mas amplio que esto.
+// 0 = sin limite: usa el SL que calcula la estructura del mercado.
+// >0 = limita el SL a ese maximo en USD (ej.: 30 = SL maximo 30 USD).
 //--------------------------------------------------
 
-input double InpMaxSL = 0.0;  // 0 = valor calculado, >0 = maximo en USD
+input double InpMaxSL = 0.0;  // Maximo SL por operacion en USD. 0 = sin limite
 
 //--------------------------------------------------
-// Capa de probabilidad (scoring ponderado)
-// 0.0 = desactivado (comportamiento clasico booleano)
+// FILTRO DE PROBABILIDAD (scoring ponderado)
+// P(de senalar) = suma de pesos / suma total x 100.
+// Threshold 0 = desactivado: usa el metodo clasico (si/no).
+// Threshold >0 (ej.: 60) = solo senala si la probabilidad es >= ese %.
+// Los pesos regulan cuanta importancia da cada factor (0..1):
+//   peso 1 = influye a plena potencia; peso 0 = ignora ese factor.
+//   Sesion: 0 = ignora la hora del dia; >0 = favorece horas de mayor actividad.
 //--------------------------------------------------
 
-input double InpScoreThreshold = 0.0;  // probabilidad minima % para senalar
-input double InpW_Tendencia    = 1.0;  // peso de la tendencia local
-input double InpW_Htf          = 1.0;  // peso del sesgo del tf superior
-input double InpW_Setup        = 1.0;  // peso del setup estructural
-input double InpW_Sesion       = 0.0;  // peso de la ventana de sesion
+input double InpScoreThreshold = 0.0;  // Probabilidad minima % para senalar. 0 = desactivado
+input double InpW_Tendencia    = 1.0;  // Peso de la tendencia local (0..1)
+input double InpW_Htf          = 1.0;  // Peso del sesgo del timeframe superior (0..1)
+input double InpW_Setup        = 1.0;  // Peso del setup estructural (0..1)
+input double InpW_Sesion       = 0.0;  // Peso de la ventana de sesion/hora (0..1)
 
 //--------------------------------------------------
 // Instancia global del núcleo
