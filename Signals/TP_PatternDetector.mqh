@@ -23,7 +23,8 @@ enum ENUM_TP_PATRON_CONF
 
 //+------------------------------------------------------------------+
 //| Detector de patrones de vela (OHLC puro, velas CERRADAS)         |
-//| Prioridad fija: 3S/3C > Engulfing > Marubozu > Doji > Inside Bar |
+//| Prioridad fija: 3S/3C estricto (rev) > 3S/3C (cont) >            |
+//|                 Engulfing > Marubozu > Doji > Inside Bar          |
 //| Solo lee datos de CTPPriceSeries — NO llama Update()             |
 //+------------------------------------------------------------------+
 class CTPPatternDetector
@@ -90,6 +91,76 @@ private:
       }
 
       return false;
+   }
+
+   //--------------------------------------------------
+   // 3 Cuervos ESTRICTO (bajista, REVERSIÓN)
+   // 3 velas bajistas con cierres descendentes Y cada
+   // apertura DENTRO del cuerpo de la vela anterior
+   // (presión bajista sostenida sin gaps = reversión)
+   // Velas en shift 1 (más reciente), 2, 3 (más antigua)
+   //--------------------------------------------------
+
+   bool Detectar3CuervosEstricto(const CTPPriceSeries &prices)
+   {
+      // 3 velas bajistas (cierre < apertura)
+      if(prices.Close(1) >= prices.Open(1) ||
+         prices.Close(2) >= prices.Open(2) ||
+         prices.Close(3) >= prices.Open(3))
+         return false;
+
+      // Cierres descendentes progresivos
+      if(prices.Close(1) >= prices.Close(2) ||
+         prices.Close(2) >= prices.Close(3))
+         return false;
+
+      // Contención de cuerpo (vela n bajista → cuerpo [Close(n), Open(n)]):
+      // apertura de la vela más reciente dentro del cuerpo de la anterior
+      if(!(prices.Close(2) < prices.Open(1) && prices.Open(1) < prices.Open(2)))
+         return false;
+
+      if(!(prices.Close(3) < prices.Open(2) && prices.Open(2) < prices.Open(3)))
+         return false;
+
+      m_dir     = TP_PATRON_BAJISTA;
+      m_conf    = TP_PATRON_CONF_ALTA;
+      m_nombre  = "3 Cuervos estricto";
+      m_motivo  = "reversión";
+      return true;
+   }
+
+   //--------------------------------------------------
+   // 3 Soldados ESTRICTO (alcista, REVERSIÓN)
+   // 3 velas alcistas con cierres ascendentes Y cada
+   // apertura DENTRO del cuerpo de la vela anterior
+   //--------------------------------------------------
+
+   bool Detectar3SoldadosEstricto(const CTPPriceSeries &prices)
+   {
+      // 3 velas alcistas (cierre > apertura)
+      if(prices.Close(1) <= prices.Open(1) ||
+         prices.Close(2) <= prices.Open(2) ||
+         prices.Close(3) <= prices.Open(3))
+         return false;
+
+      // Cierres ascendentes progresivos
+      if(prices.Close(1) <= prices.Close(2) ||
+         prices.Close(2) <= prices.Close(3))
+         return false;
+
+      // Contención de cuerpo (vela n alcista → cuerpo [Open(n), Close(n)]):
+      // apertura de la vela más reciente dentro del cuerpo de la anterior
+      if(!(prices.Open(2) < prices.Open(1) && prices.Open(1) < prices.Close(2)))
+         return false;
+
+      if(!(prices.Open(3) < prices.Open(2) && prices.Open(2) < prices.Close(3)))
+         return false;
+
+      m_dir     = TP_PATRON_ALCISTA;
+      m_conf    = TP_PATRON_CONF_ALTA;
+      m_nombre  = "3 Soldados estricto";
+      m_motivo  = "reversión";
+      return true;
    }
 
    //--------------------------------------------------
@@ -278,7 +349,8 @@ public:
    // Actualizar detección (llamar UNA vez por vela nueva)
    // Lee datos del array cacheado de CTPPriceSeries.
    // NO llama prices.Update() — Core lo hace.
-   // Prioridad fija: 3S/3C > Engulfing > Marubozu > Doji > Inside Bar
+   // Prioridad fija: 3S/3C estricto (rev) > 3S/3C (cont) >
+   //                  Engulfing > Marubozu > Doji > Inside Bar
    //--------------------------------------------------
 
    bool Update(const CTPPriceSeries &prices)
@@ -293,6 +365,13 @@ public:
          return false;
 
       // Primera coincidencia gana (prioridad fija D9)
+      // Reversión estricta > continuación > resto
+      if(Detectar3CuervosEstricto(prices))
+         return true;
+
+      if(Detectar3SoldadosEstricto(prices))
+         return true;
+
       if(Detectar3Soldados(prices))
          return true;
 
