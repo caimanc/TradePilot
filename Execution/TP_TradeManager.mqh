@@ -428,11 +428,43 @@ public:
       // Ya existe una posición
       //--------------------------------------------------
 
-      if(PositionSelect(_Symbol))
-      {
-         TrailingGanancia();
-         return true;
-      }
+       if(PositionSelect(_Symbol))
+       {
+          //--------------------------------------------------
+          // Salida por agotamiento (modo 3):
+          // posición propia + patrón CONTRARIO confirmado
+          //--------------------------------------------------
+
+          ulong propio = TicketPosicionPropia();
+
+          if(propio != 0 && PositionSelectByTicket(propio))
+          {
+             long tipo = PositionGetInteger(POSITION_TYPE);
+
+             bool agotamiento =
+                (tipo == POSITION_TYPE_BUY  && signals.PatronBajistaConfirmado()) ||
+                (tipo == POSITION_TYPE_SELL && signals.PatronAlcistaConfirmado());
+
+             if(agotamiento)
+             {
+                Print("SALIDA POR AGOTAMIENTO: patrón de ",
+                      signals.UltimoPatron(),
+                      " clausura dirección");
+
+                if(m_execution.CloseByTicket(propio))
+                {
+                   if(m_alertaSonido)
+                      Alert("TradePilot: posición cerrada por agotamiento (",
+                            signals.UltimoPatron(), ")");
+                }
+
+                return true;   // sin trailing esta vela
+             }
+          }
+
+          TrailingGanancia();
+          return true;
+       }
 
       //--------------------------------------------------
       // No hay posición: resetear estado del trailing TP
@@ -522,11 +554,12 @@ public:
             }
          }
 
-         bool ok =
-            m_execution.Buy(
-               risk.Volume(),
-               buySL,
-               buyTP);
+          bool ok =
+             m_execution.Buy(
+                risk.Volume(),
+                buySL,
+                buyTP,
+                signals.CommentBuy());
 
          if(ok)
          {
@@ -613,11 +646,12 @@ public:
             }
          }
 
-         bool ok =
-            m_execution.Sell(
-               risk.Volume(),
-               sellSL,
-               sellTP);
+          bool ok =
+             m_execution.Sell(
+                risk.Volume(),
+                sellSL,
+                sellTP,
+                signals.CommentSell());
 
          if(ok)
          {
