@@ -179,11 +179,14 @@ public:
       double trailStepIncrease = 5.0,
       bool   trailTP           = true,
       double maxSL             = 0.0,
-      double scoreThreshold    = 0.0,
-      double wTendencia        = 1.0,
-      double wHtf              = 1.0,
-      double wSetup            = 1.0,
-      double wSesion           = 0.0)
+       double scoreThreshold    = 0.0,
+       double wTendencia        = 1.0,
+       double wHtf              = 1.0,
+       double wSetup            = 1.0,
+       double wSesion           = 0.0,
+       bool   patronActivo      = false,
+       bool   patronEntrada     = true,
+       bool   patronAgotamiento = true)
    {
       Print("====================================");
       Print("Inicializando TradePilot...");
@@ -388,6 +391,17 @@ public:
          Print("ERROR inicializando TradeManager.");
          return false;
       }
+
+
+      //--------------------------------------------------
+      // Parámetros del módulo de patrones de vela
+      //--------------------------------------------------
+
+      m_signalManager.SetPatronParams(
+         patronActivo,
+         patronEntrada,
+         patronAgotamiento
+      );
 
 
       //--------------------------------------------------
@@ -724,7 +738,8 @@ public:
       //==================================================
 
       m_signalManager.Update(
-         m_marketState
+         m_marketState,
+         m_priceSeries
       );
 
       //--------------------------------------------------

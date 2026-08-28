@@ -76,6 +76,18 @@ input double InpW_Setup        = 1.0;  // Peso del setup estructural (0..1)
 input double InpW_Sesion       = 0.0;  // Peso de la ventana de sesion/hora (0..1)
 
 //--------------------------------------------------
+// PATRONES DE VELA (suficiencia, no necesidad)
+// Segundo camino de señal + salida por agotamiento.
+// Sin patrón = el EA opera EXACTAMENTE igual que hoy.
+// InpPatronesActivo es el maestro: con false, el módulo
+// completo queda desactivado y la señal es solo la clásica.
+//--------------------------------------------------
+
+input bool   InpPatronesActivo    = false; // Maestro: habilita el módulo de patrones de vela
+input bool   InpPatronEntrada     = true;  // Modo 1: entrada por patrón confirmado
+input bool   InpPatronAgotamiento = true;  // Modo 3: salida por agotamiento (patrón contrario confirmado)
+
+//--------------------------------------------------
 // Instancia global del núcleo
 //--------------------------------------------------
 
@@ -101,11 +113,14 @@ int OnInit()
          InpTrailStepIncrease,
          InpTrailTP,
          InpMaxSL,
-         InpScoreThreshold,
-         InpW_Tendencia,
-         InpW_Htf,
-         InpW_Setup,
-         InpW_Sesion))
+          InpScoreThreshold,
+          InpW_Tendencia,
+          InpW_Htf,
+          InpW_Setup,
+          InpW_Sesion,
+          InpPatronesActivo,
+          InpPatronEntrada,
+          InpPatronAgotamiento))
    {
       Print("ERROR: No fue posible inicializar TradePilot.");
       return INIT_FAILED;
