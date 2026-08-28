@@ -492,6 +492,14 @@ public:
 
 
       //==================================================
+      // TRAILING POR TICK: evalua ganancia y protege SL/TP en cada tick
+      // (no espera el cierre de vela; evita ceder ganancia flotante)
+      //==================================================
+
+      m_tradeManager.ActualizarTrailing();
+
+
+      //==================================================
       // RISK MANAGER
       //==================================================
 

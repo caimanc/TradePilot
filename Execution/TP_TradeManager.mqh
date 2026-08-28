@@ -413,6 +413,22 @@ public:
    }
 
    //--------------------------------------------------
+   // Trailing por tick: evalua y protege ganancia en CADA tick
+   // (independiente del cierre de vela; solo actua sobre posicion existente)
+   //--------------------------------------------------
+
+   void ActualizarTrailing()
+   {
+      if(!PositionSelect(_Symbol))
+         return;
+
+      if(m_trailMinProfit <= 0.0)
+         return;
+
+      TrailingGanancia();
+   }
+
+   //--------------------------------------------------
    // Actualización
    //--------------------------------------------------
 
@@ -451,20 +467,19 @@ public:
                       signals.UltimoPatron(),
                       " clausura dirección");
 
-                if(m_execution.CloseByTicket(propio))
-                {
-                   if(m_alertaSonido)
-                      Alert("TradePilot: posición cerrada por agotamiento (",
-                            signals.UltimoPatron(), ")");
-                }
+                 if(m_execution.CloseByTicket(propio))
+                 {
+                    if(m_alertaSonido)
+                       Alert("TradePilot: posición cerrada por agotamiento (",
+                             signals.UltimoPatron(), ")");
+                 }
 
-                return true;   // sin trailing esta vela
-             }
-          }
+                 return true;   // sin trailing esta vela
+              }
+           }
 
-          TrailingGanancia();
-          return true;
-       }
+           return true;   // posicion gestionada: trailing ya se evalua por tick
+        }
 
       //--------------------------------------------------
       // No hay posición: resetear estado del trailing TP
