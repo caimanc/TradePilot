@@ -174,53 +174,102 @@ private:
    {
       double o1 = prices.Open(1),  c1 = prices.Close(1);
       double o2 = prices.Open(2),  c2 = prices.Close(2);
+      double h1 = prices.High(1),  l1 = prices.Low(1);
+      double h2 = prices.High(2),  l2 = prices.Low(2);
 
       double cuerpo1 = Cuerpo(o1, c1);
       double cuerpo2 = Cuerpo(o2, c2);
 
       //--------------------------------------------------
-      // Engulfing alcista: vela2 bajista, vela1 alcista
-      // cuerpo1 engloba completamente a cuerpo2
+      // Engulfing (3 niveles, todos motivo "reversión"):
+      //  - cuerpo+rango: vela1 absorbe CUERPO y RANGO total de vela2 (ALTA)
+      //  - cuerpo-solo : vela1 engloba solo el cuerpo de vela2 (ALTA/MEDIA)
+      //  - rango-solo  : vela1 engloba solo el rango total, cuerpo significativo (MEDIA)
+      // Nota: con cuerpoEngloba siempre cuerpo1>cuerpo2 ⇒ no existe nivel BAJA
       //--------------------------------------------------
 
-      if(c1 > o1 && c2 < o2 &&
-         o1 <= o2 && c1 >= c2)
+      //--------------------------------------------------
+      // Engulfing alcista: vela2 bajista, vela1 alcista
+      //--------------------------------------------------
+
+      if(c1 > o1 && c2 < o2)
       {
-         m_dir = TP_PATRON_ALCISTA;
-         m_motivo = "reversión";
+         bool cuerpoEngloba = (o1 <= o2 && c1 >= c2);
+         bool rangoCompleto = (h1 >= h2 && l1 <= l2);
 
-         // Confianza por firmeza del cierre
-         if(cuerpo2 == 0.0 || cuerpo1 > 1.5 * cuerpo2)
-            m_conf = TP_PATRON_CONF_ALTA;
-         else if(cuerpo1 > cuerpo2)
-            m_conf = TP_PATRON_CONF_MEDIA;
-         else
-            m_conf = TP_PATRON_CONF_BAJA;
+         if(cuerpoEngloba && rangoCompleto)
+         {
+            m_dir    = TP_PATRON_ALCISTA;
+            m_motivo = "reversión";
+            m_conf   = TP_PATRON_CONF_ALTA;
+            m_nombre = "Engulfing alcista completo";
+            return true;
+         }
 
-         m_nombre = "Engulfing alcista";
-         return true;
+         if(cuerpoEngloba)
+         {
+            m_dir    = TP_PATRON_ALCISTA;
+            m_motivo = "reversión";
+
+            if(cuerpo1 > 1.5 * cuerpo2)
+               m_conf = TP_PATRON_CONF_ALTA;
+            else
+               m_conf = TP_PATRON_CONF_MEDIA;
+
+            m_nombre = "Engulfing alcista";
+            return true;
+         }
+
+         if(rangoCompleto && cuerpo1 >= cuerpo2)
+         {
+            m_dir    = TP_PATRON_ALCISTA;
+            m_motivo = "reversión";
+            m_conf   = TP_PATRON_CONF_MEDIA;
+            m_nombre = "Engulfing alcista";
+            return true;
+         }
       }
 
       //--------------------------------------------------
       // Engulfing bajista: vela2 alcista, vela1 bajista
-      // cuerpo1 engloba completamente a cuerpo2
       //--------------------------------------------------
 
-      if(c1 < o1 && c2 > o2 &&
-         o1 >= o2 && c1 <= c2)
+      if(c1 < o1 && c2 > o2)
       {
-         m_dir = TP_PATRON_BAJISTA;
-         m_motivo = "reversión";
+         bool cuerpoEngloba = (o1 >= o2 && c1 <= c2);
+         bool rangoCompleto = (h1 >= h2 && l1 <= l2);
 
-         if(cuerpo2 == 0.0 || cuerpo1 > 1.5 * cuerpo2)
-            m_conf = TP_PATRON_CONF_ALTA;
-         else if(cuerpo1 > cuerpo2)
-            m_conf = TP_PATRON_CONF_MEDIA;
-         else
-            m_conf = TP_PATRON_CONF_BAJA;
+         if(cuerpoEngloba && rangoCompleto)
+         {
+            m_dir    = TP_PATRON_BAJISTA;
+            m_motivo = "reversión";
+            m_conf   = TP_PATRON_CONF_ALTA;
+            m_nombre = "Engulfing bajista completo";
+            return true;
+         }
 
-         m_nombre = "Engulfing bajista";
-         return true;
+         if(cuerpoEngloba)
+         {
+            m_dir    = TP_PATRON_BAJISTA;
+            m_motivo = "reversión";
+
+            if(cuerpo1 > 1.5 * cuerpo2)
+               m_conf = TP_PATRON_CONF_ALTA;
+            else
+               m_conf = TP_PATRON_CONF_MEDIA;
+
+            m_nombre = "Engulfing bajista";
+            return true;
+         }
+
+         if(rangoCompleto && cuerpo1 >= cuerpo2)
+         {
+            m_dir    = TP_PATRON_BAJISTA;
+            m_motivo = "reversión";
+            m_conf   = TP_PATRON_CONF_MEDIA;
+            m_nombre = "Engulfing bajista";
+            return true;
+         }
       }
 
       return false;
@@ -242,12 +291,6 @@ private:
 
       // Vela plana: sin rango, no hay Marubozu
       if(r <= 0.0)
-         return false;
-
-      double cuerpo = Cuerpo(o, c);
-
-      // Al menos 30% del rango debe ser cuerpo para ser Marubozu
-      if(cuerpo < 0.3 * r)
          return false;
 
       double mechaSup = (h - MathMax(o, c)) / r;
@@ -285,6 +328,7 @@ private:
    //--------------------------------------------------
    // Doji: cuerpo < 10% del rango total
    // Dirección NEUTRA (indecisión/giro)
+   // Solo informativo: NEUTRA no abre entradas (Activo() exige dirección)
    //--------------------------------------------------
 
    bool DetectarDoji(const CTPPriceSeries &prices)
@@ -314,6 +358,7 @@ private:
    //--------------------------------------------------
    // Inside Bar: vela1 contenida en vela2
    // Dirección NEUTRA (compactación)
+   // Solo informativo: NEUTRA no abre entradas (Activo() exige dirección)
    //--------------------------------------------------
 
    bool DetectarInsideBar(const CTPPriceSeries &prices)
