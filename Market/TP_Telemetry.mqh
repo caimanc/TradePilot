@@ -68,13 +68,29 @@ public:
       double precio,
       double sl,
       double tp,
-      double volumen)
+      double volumen,
+      const CTPMarketState &marketState,
+      const CTPSignalManager &signals)
    {
       m_openTicket = ticket;
       m_signalId   = signalId;
       m_tracked    = true;
       m_openTime   = TimeCurrent();
       m_openPrice  = precio;
+
+      //--------------------------------------------------
+      // Features del modelo en el momento de la entrada
+      // (para el futuro dataset del Naive Bayes)
+      //--------------------------------------------------
+
+      string tend = marketState.IsBullTrend() ? "BULL" :
+                    (marketState.IsBearTrend() ? "BEAR" : "RANGO");
+
+      string htf = marketState.IsHtfBull() ? "BULL" :
+                   (marketState.IsHtfBear() ? "BEAR" : "NEUTRO");
+
+      string setup = marketState.IsBuySetupValid() ? "BUY" :
+                     (marketState.IsSellSetupValid() ? "SELL" : "NINGUNO");
 
       Print(
          "TP_TEL|ENTRADA|",
@@ -85,7 +101,15 @@ public:
          "|sl=", DoubleToString(sl, 5),
          "|tp=", DoubleToString(tp, 5),
          "|vol=", DoubleToString(volumen, 2),
-         "|time=", TimeToString(m_openTime)
+         "|time=", TimeToString(m_openTime),
+         "|tend=", tend,
+         "|htf=", htf,
+         "|setup=", setup,
+         "|sesion=", signals.SesionName(),
+         "|patron=", signals.UltimoPatron(),
+         "|pdir=", signals.PatronDireccion(),
+         "|pmot=", signals.PatronMotivo(),
+         "|adx=", DoubleToString(marketState.TrendStrength(), 1)
       );
    }
 

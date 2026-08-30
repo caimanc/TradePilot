@@ -2,6 +2,8 @@
 #define __TP_MONITOR_MQH__
 
 #include "TP_Telemetry.mqh"
+#include "../Signals/TP_SignalManager.mqh"
+#include "../MarketState/TP_MarketState.mqh"
 
 //+------------------------------------------------------------------+
 //| Monitor de operaciones                                           |
@@ -40,7 +42,9 @@ private:
    // Detectar apertura/ajuste de posicion propia
    //--------------------------------------------------
 
-   void DetectarPosicion()
+   void DetectarPosicion(
+      const CTPMarketState &marketState,
+      const CTPSignalManager &signals)
    {
       bool encontrada = false;
 
@@ -85,7 +89,9 @@ private:
                precio,
                sl,
                tp,
-               volumen
+               volumen,
+               marketState,
+               signals
             );
          }
          else if(ticket != m_posTicket)
@@ -209,9 +215,11 @@ public:
    // Actualización (llamar cada tick)
    //--------------------------------------------------
 
-   void Update()
+   void Update(
+      const CTPMarketState &marketState,
+      const CTPSignalManager &signals)
    {
-      DetectarPosicion();
+      DetectarPosicion(marketState, signals);
    }
 
    //--------------------------------------------------

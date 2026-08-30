@@ -819,7 +819,10 @@ public:
       // Monitor de operaciones (telemetría + noticias)
       //--------------------------------------------------
 
-      m_monitor.Update();
+      m_monitor.Update(
+         m_marketState,
+         m_signalManager
+      );
 
 
       //==================================================
