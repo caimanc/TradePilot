@@ -28,6 +28,7 @@ private:
    //--------------------------------------------------
 
    ulong    m_posTicket;
+   ulong    m_posId;         // POSITION_IDENTIFIER: vincula entrada y salida
    bool     m_posAbierta;
 
    string   m_posDireccion;
@@ -74,6 +75,7 @@ private:
             m_posAbierta    = true;
             m_posTicket     = ticket;
             m_posDireccion  = dir;
+            m_posId         = (ulong)PositionGetInteger(POSITION_IDENTIFIER);
 
             m_signalCounter++;
 
@@ -99,6 +101,7 @@ private:
             // Cambio de ticket sin cierre aparente (raro): re-sincronizar
             m_posTicket    = ticket;
             m_posDireccion = dir;
+            m_posId        = (ulong)PositionGetInteger(POSITION_IDENTIFIER);
          }
 
          break;
@@ -113,7 +116,9 @@ private:
          double precioCierre = 0.0;
          string motivo    = "desconocido";
 
-         // Buscar el deal OUT de nuestro ticket/magic en el historial
+         // Buscar el deal OUT de NUESTRA posicion (por POSITION_IDENTIFIER)
+         // en el historial de hoy. Sin este filtro, se tomaba el primer deal
+         // OUT del dia (valores constantes/erroneos) en vez del cierre real.
          if(HistorySelect(0, TimeCurrent()))
          {
             int total = HistoryDealsTotal();
@@ -137,7 +142,11 @@ private:
                   entrada != DEAL_ENTRY_OUT_BY)
                   continue;
 
-               // Deal de salida
+               // Vincular por POSITION_IDENTIFIER (entrada y salida comparten id)
+               if((ulong)HistoryDealGetInteger(dTicket, DEAL_POSITION_ID) != m_posId)
+                  continue;
+
+               // Deal de salida de nuestra posicion
                profit    = HistoryDealGetDouble(dTicket, DEAL_PROFIT);
                swap      = HistoryDealGetDouble(dTicket, DEAL_SWAP);
                commission = HistoryDealGetDouble(dTicket, DEAL_COMMISSION);
@@ -177,6 +186,7 @@ private:
 
          m_posAbierta  = false;
          m_posTicket   = 0;
+         m_posId       = 0;
       }
    }
 
@@ -190,6 +200,7 @@ public:
    {
       m_magicNumber   = 0;
       m_posTicket     = 0;
+      m_posId         = 0;
       m_posAbierta    = false;
       m_posDireccion  = "";
       m_signalCounter = 0;
