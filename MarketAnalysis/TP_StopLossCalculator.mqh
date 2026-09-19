@@ -31,6 +31,14 @@ private:
 
    bool m_initialized;
 
+   //--------------------------------------------------
+   // Perfil de volumen (opcional)
+   //--------------------------------------------------
+
+   bool m_perfilActivo;
+
+   double m_poc;
+
 
 public:
 
@@ -49,6 +57,10 @@ public:
       m_distance = 0.0;
 
       m_initialized = false;
+
+      m_perfilActivo = false;
+
+      m_poc = 0.0;
    }
 
 
@@ -97,6 +109,21 @@ public:
 
 
       return true;
+   }
+
+
+   //==================================================
+   // Configuración del perfil de volumen (opcional)
+   //==================================================
+
+   void SetPerfilActivo(bool activo)
+   {
+      m_perfilActivo = activo;
+   }
+
+   void SetPOC(double poc)
+   {
+      m_poc = poc;
    }
 
 
@@ -151,6 +178,25 @@ public:
             atrBuffer,
             minimumBuffer
          );
+
+
+      //--------------------------------------------------
+      // Perfil de volumen: salir de la pared del POC
+      // Si el swingLow esta cerca del POC (<= 1 ATR),
+      // extender el SL mas alla del nivel (tope +1 ATR)
+      //--------------------------------------------------
+
+      if(m_perfilActivo && m_poc > 0.0)
+      {
+         double distPoc = MathAbs(swingLow - m_poc);
+
+         if(distPoc > 0.0 && distPoc <= atr)
+         {
+            buffer = MathMax(
+               buffer,
+               MathMin(atr, distPoc));
+         }
+      }
 
 
       //--------------------------------------------------
@@ -255,6 +301,25 @@ public:
             atrBuffer,
             minimumBuffer
          );
+
+
+      //--------------------------------------------------
+      // Perfil de volumen: salir de la pared del POC
+      // Si el swingHigh esta cerca del POC (<= 1 ATR),
+      // extender el SL mas alla del nivel (tope +1 ATR)
+      //--------------------------------------------------
+
+      if(m_perfilActivo && m_poc > 0.0)
+      {
+         double distPoc = MathAbs(swingHigh - m_poc);
+
+         if(distPoc > 0.0 && distPoc <= atr)
+         {
+            buffer = MathMax(
+               buffer,
+               MathMin(atr, distPoc));
+         }
+      }
 
 
       //--------------------------------------------------
