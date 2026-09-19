@@ -30,6 +30,14 @@ private:
 
    bool m_initialized;
 
+   //--------------------------------------------------
+   // VWAP (objetivo dinámico, opcional)
+   //--------------------------------------------------
+
+   bool m_vwapActivo;
+
+   double m_vwapTarget;
+
 
 public:
 
@@ -46,6 +54,10 @@ public:
       m_sellTakeProfit = 0.0;
 
       m_initialized = false;
+
+      m_vwapActivo   = false;
+
+      m_vwapTarget   = 0.0;
    }
 
 
@@ -85,6 +97,21 @@ public:
 
 
    //==================================================
+   // Configuración del objetivo VWAP (opcional)
+   //==================================================
+
+   void SetVWAPActivo(bool activo)
+   {
+      m_vwapActivo = activo;
+   }
+
+   void SetVWAPTarget(double vwapTarget)
+   {
+      m_vwapTarget = vwapTarget;
+   }
+
+
+   //==================================================
    // Calcular TP para ambos lados
    //==================================================
 
@@ -120,6 +147,17 @@ public:
          m_buyTakeProfit =
             buyEntry +
             m_rrMultiplier * buyDistance;
+
+         //--------------------------------------------------
+         // VWAP: objetivo mas cercano si queda antes del RR fijo
+         //--------------------------------------------------
+
+         if(m_vwapActivo &&
+            m_vwapTarget > buyEntry &&
+            m_vwapTarget < m_buyTakeProfit)
+         {
+            m_buyTakeProfit = m_vwapTarget;
+         }
       }
 
 
@@ -134,6 +172,17 @@ public:
          m_sellTakeProfit =
             sellEntry -
             m_rrMultiplier * sellDistance;
+
+         //--------------------------------------------------
+         // VWAP: objetivo mas cercano si queda antes del RR fijo
+         //--------------------------------------------------
+
+         if(m_vwapActivo &&
+            m_vwapTarget < sellEntry &&
+            m_vwapTarget > m_sellTakeProfit)
+         {
+            m_sellTakeProfit = m_vwapTarget;
+         }
       }
 
 
