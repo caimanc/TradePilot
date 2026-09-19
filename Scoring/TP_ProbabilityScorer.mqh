@@ -3,6 +3,7 @@
 
 #include "../MarketState/TP_MarketState.mqh"
 #include "../Sessions/TP_Sessions.mqh"
+#include "../MarketAnalysis/TP_DeltaFlow.mqh"
 
 //+------------------------------------------------------------------+
 //| Scorer probabilistico (scoring ponderado)                        |
@@ -36,6 +37,16 @@ private:
    double m_sesionFactor;
 
    CTPSessions m_sessions;
+
+   //--------------------------------------------------
+   // Feature de flujo/delta (opcional)
+   //--------------------------------------------------
+
+   bool m_deltaActivo;
+
+   double m_wDelta;
+
+   CTPDeltaFlow *m_deltaFlow;
 
    //--------------------------------------------------
    // Peso activo de cada feature (0 si peso en 0)
@@ -111,6 +122,10 @@ private:
       if(m_wSesion > 0.0)
          suma += m_wSesion;
 
+      // El delta cuenta solo si el interruptor esta activo
+      if(m_deltaActivo && m_deltaFlow != NULL)
+         suma += m_wDelta;
+
       return suma;
    }
 
@@ -131,6 +146,10 @@ public:
       m_pBuy        = 0.0;
       m_pSell       = 0.0;
       m_sesionFactor = 0.0;
+
+      m_deltaActivo = false;
+      m_wDelta      = 1.0;
+      m_deltaFlow   = NULL;
    }
 
    //--------------------------------------------------
@@ -164,6 +183,20 @@ public:
          false,   // Tokyo
          true,    // London
          true);   // New York
+   }
+
+   //--------------------------------------------------
+   // Feature de flujo/delta (opcional)
+   //--------------------------------------------------
+
+   void SetDeltaActivo(bool activo)
+   {
+      m_deltaActivo = activo;
+   }
+
+   void SetDeltaFlow(CTPDeltaFlow &delta)
+   {
+      m_deltaFlow = GetPointer(delta);
    }
 
    //--------------------------------------------------
@@ -226,6 +259,19 @@ public:
       {
          scoreBuy  += m_wSesion * m_sesionFactor;
          scoreSell += m_wSesion * m_sesionFactor;
+      }
+
+      //--------------------------------------------------
+      // Flujo/delta (feature opcional)
+      // Delta positivo favorece compra; negativo, venta
+      //--------------------------------------------------
+
+      if(m_deltaActivo && m_deltaFlow != NULL)
+      {
+         double fDelta = (m_deltaFlow.DeltaNorm() + 1.0) / 2.0;
+
+         scoreBuy  += m_wDelta *    fDelta;
+         scoreSell += m_wDelta * (1.0 - fDelta);
       }
 
       m_pBuy  = scoreBuy  / suma * 100.0;
