@@ -21,6 +21,11 @@
 #include "../MarketAnalysis/TP_TakeProfitCalculator.mqh"
 #include "../MarketAnalysis/TP_HTFContext.mqh"
 
+#include "../MarketAnalysis/TP_VWAP.mqh"
+#include "../MarketAnalysis/TP_SweepDetector.mqh"
+#include "../MarketAnalysis/TP_DeltaFlow.mqh"
+#include "../MarketAnalysis/TP_VolumeProfile.mqh"
+
 #include "../MarketState/TP_MarketState.mqh"
 
 #include "../Scoring/TP_ProbabilityScorer.mqh"
@@ -88,6 +93,11 @@ private:
    CTPMarketStructure    m_marketStructure;
    CTPStructureAnalyzer  m_structureAnalyzer;
 
+   // Análisis avanzado (opcional)
+   CTPVWAP             m_vwap;
+   CTPSweepDetector    m_sweeper;
+   CTPDeltaFlow        m_delta;
+   CTPVolumeProfile    m_profile;
 
    //==================================================
    // Stop Loss
@@ -186,7 +196,11 @@ public:
        double wSesion           = 0.0,
        bool   patronActivo      = false,
        bool   patronEntrada     = true,
-       bool   patronAgotamiento = true)
+       bool   patronAgotamiento = true,
+       bool   vwapActivo        = false,
+       bool   barridoActivo     = false,
+       bool   deltaActivo       = false,
+       bool   perfilActivo      = false)
    {
       Print("====================================");
       Print("Inicializando TradePilot...");
@@ -425,6 +439,13 @@ public:
          wSesion
       );
 
+      // Análisis avanzado (opcional)
+      m_vwap.SetPriceSeries(m_priceSeries);
+      m_signalManager.SetAnalisisAvanzado(vwapActivo, m_vwap, barridoActivo, m_sweeper);
+      m_signalManager.SetDeltaDetector(deltaActivo, m_delta);
+      m_stopLossCalculator.SetPerfilActivo(perfilActivo);
+      m_takeProfitCalculator.SetVWAPActivo(vwapActivo);
+
       //--------------------------------------------------
       // Offset UTC del broker (horas) para sesiones
       //--------------------------------------------------
@@ -615,6 +636,17 @@ public:
 
       double atr =
          m_indicators.ATR();
+
+
+      // Análisis avanzado (opcional)
+      m_vwap.Update();
+      m_sweeper.Update(m_priceSeries.High(1), m_priceSeries.Low(1),
+                       m_priceSeries.Close(1), m_priceSeries.Open(1),
+                       swingHigh, swingLow);
+      m_delta.Update(m_priceSeries, 14);
+      m_profile.Update(m_priceSeries, 24);
+      m_stopLossCalculator.SetPOC(m_profile.POC());
+      m_takeProfitCalculator.SetVWAPTarget(m_vwap.Precio());
 
 
       //==================================================

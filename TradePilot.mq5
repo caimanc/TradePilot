@@ -88,6 +88,17 @@ input bool   InpPatronEntrada     = true;  // Modo 1: entrada por patrón confir
 input bool   InpPatronAgotamiento = true;  // Modo 3: salida por agotamiento (patrón contrario confirmado)
 
 //--------------------------------------------------
+// MÓDULOS DE ANÁLISIS AVANZADO (opcionales)
+// Cada uno se activa con su interruptor. Con todos en
+// false el EA opera EXACTAMENTE igual que hoy.
+//--------------------------------------------------
+
+input bool   InpVWAPActivo    = false; // Filtro direccional VWAP + TP dinámico al VWAP
+input bool   InpBarridoActivo = false; // Patrones reforzados por barrido de liquidez
+input bool   InpDeltaActivo   = false; // Feature de flujo/delta en el scoring
+input bool   InpPerfilActivo  = false; // SL/TP conscientes del perfil de volumen
+
+//--------------------------------------------------
 // Instancia global del núcleo
 //--------------------------------------------------
 
@@ -118,9 +129,13 @@ int OnInit()
           InpW_Htf,
           InpW_Setup,
           InpW_Sesion,
-          InpPatronesActivo,
-          InpPatronEntrada,
-          InpPatronAgotamiento))
+InpPatronesActivo,
+           InpPatronEntrada,
+           InpPatronAgotamiento,
+           InpVWAPActivo,
+           InpBarridoActivo,
+           InpDeltaActivo,
+           InpPerfilActivo))
    {
       Print("ERROR: No fue posible inicializar TradePilot.");
       return INIT_FAILED;
