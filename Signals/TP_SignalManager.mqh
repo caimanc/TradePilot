@@ -5,6 +5,9 @@
 #include "TP_PatternDetector.mqh"
 #include "../MarketState/TP_MarketState.mqh"
 #include "../Scoring/TP_ProbabilityScorer.mqh"
+#include "../MarketAnalysis/TP_VWAP.mqh"
+#include "../MarketAnalysis/TP_SweepDetector.mqh"
+#include "../MarketAnalysis/TP_DeltaFlow.mqh"
 
 //+------------------------------------------------------------------+
 //| Administrador de señales                                         |
@@ -31,6 +34,18 @@ private:
 
    bool m_compraPatron;    // m_patronAlc ∧ m_entradaPatron
    bool m_ventaPatron;     // m_patronBaj ∧ m_entradaPatron
+
+   //--------------------------------------------------
+   // Análisis avanzado (opcional)
+   //--------------------------------------------------
+
+   bool m_vwapActivo;      // filtro direccional por VWAP
+
+   CTPVWAP *m_vwap;
+
+   bool m_barridoActivo;   // refuerzo/invalidación por barrido de liquidez
+
+   CTPSweepDetector *m_sweeper;
 
    //--------------------------------------------------
    // Confirmación del patrón (regla D3)
@@ -64,6 +79,11 @@ public:
       m_patronBaj     = false;
       m_compraPatron  = false;
       m_ventaPatron   = false;
+
+      m_vwapActivo    = false;
+      m_vwap          = NULL;
+      m_barridoActivo = false;
+      m_sweeper       = NULL;
    }
 
    //--------------------------------------------------
@@ -112,6 +132,35 @@ public:
    }
 
    //--------------------------------------------------
+   // Configurar análisis avanzado (VWAP + barrido)
+   //--------------------------------------------------
+
+   void SetAnalisisAvanzado(
+      bool vwapActivo,
+      CTPVWAP &vwap,
+      bool barridoActivo,
+      CTPSweepDetector &sweeper)
+   {
+      m_vwapActivo    = vwapActivo;
+      m_barridoActivo = barridoActivo;
+
+      m_vwap    = GetPointer(vwap);
+      m_sweeper = GetPointer(sweeper);
+   }
+
+   //--------------------------------------------------
+   // Configurar feature de flujo/delta del scoring
+   //--------------------------------------------------
+
+   void SetDeltaDetector(
+      bool deltaActivo,
+      CTPDeltaFlow &delta)
+   {
+      m_probabilityScorer.SetDeltaActivo(deltaActivo);
+      m_probabilityScorer.SetDeltaFlow(delta);
+   }
+
+   //--------------------------------------------------
    // Actualizar señales
    //--------------------------------------------------
 
@@ -136,7 +185,23 @@ public:
                     Confirmar(marketState, false);
 
       m_compraPatron = m_entradaPatron && m_patronAlc;
+
+      // Barrido de liquidez: si se barrio el maximo, el patron
+      // alcista queda invalidado para esta vela
+      if(m_barridoActivo && m_sweeper != NULL &&
+         m_sweeper.BarridoBajista())
+      {
+         m_compraPatron = false;
+      }
+
       m_ventaPatron  = m_entradaPatron && m_patronBaj;
+
+      // Simetrico: el barrido del minimo invalida el patron bajista
+      if(m_barridoActivo && m_sweeper != NULL &&
+         m_sweeper.BarridoAlcista())
+      {
+         m_ventaPatron = false;
+      }
 
       return ok;
    }
@@ -147,6 +212,11 @@ public:
 
    bool Buy() const
    {
+      // Filtro direccional VWAP (solo si esta activo y hay datos)
+      if(m_vwapActivo && m_vwap != NULL &&
+         !m_vwap.PermiteCompra(SymbolInfoDouble(_Symbol, SYMBOL_ASK)))
+         return false;
+
       return (m_trendSignal.Buy() &&
               m_probabilityScorer.Buy()) ||
              m_compraPatron;
@@ -154,6 +224,11 @@ public:
 
    bool Sell() const
    {
+      // Filtro direccional VWAP (solo si esta activo y hay datos)
+      if(m_vwapActivo && m_vwap != NULL &&
+         !m_vwap.PermiteVenta(SymbolInfoDouble(_Symbol, SYMBOL_BID)))
+         return false;
+
       return (m_trendSignal.Sell() &&
               m_probabilityScorer.Sell()) ||
              m_ventaPatron;
