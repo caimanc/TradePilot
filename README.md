@@ -10,8 +10,8 @@ Expert Advisor de MetaTrader 5 para trading sistemático, con capa de **scoring 
 
 - El bot abre posiciones **Buy/Sell** según señales (tendencia + sesgo de timeframe superior + setup estructural), opcionalmente filtradas por una **probabilidad mínima** (scoring).
 - Gestiona el riesgo: **volumen** (manual o automático por riesgo), **SL estructural**, **MaxSL en USD**, **trailing de ganancia**, **TP dinámico** y **pérdida diaria máxima**.
-- Registra **telemetría** de cada operación (para medir resultados y, en el futuro, aprender pesos dinámicamente).
-- **Opera a todas horas**; la sesión solo pondera el scoring, no bloquea.
+- Registra **telemetría** de cada operación (para medir resultados y reentrenar el modelo Naive Bayes).
+- **Opera a todas horas**; la sesión solo es una feature del scoring, no bloquea.
 
 ---
 
@@ -44,7 +44,7 @@ El bot escribe en la pestaña **"Expertos"** del terminal (y en `MQL5/Logs/YYYYM
 | Línea en el log | Significado |
 |-----------------|-------------|
 | `PROB` / probabilidades en el panel | Probabilidad calculada de Buy y de Sell (%). Si el scoring está desactivado, se muestran como referencia informativa. |
-| `Sesion : LONDON_NEWYORK (f 1.00)` | Sesión actual y **factor de ponderación** (0.00 a 1.00) aplicado al peso de sesión. |
+| `Sesion : LONDON_NEWYORK (f 1.00)` | Sesión actual y **factor informativo** (0.00 a 1.00) de la ventana de sesión. Es la feature `sesion` que consume el modelo Naive Bayes. |
 
 ### Telemetría (para medir resultados)
 
@@ -94,45 +94,42 @@ El bot escribe en la pestaña **"Expertos"** del terminal (y en `MQL5/Logs/YYYYM
 |-------|---------|---------------|---------|------|
 | `InpMaxSL` | `0.0` | **Máximo SL en USD** por operación. **0.0 = valor calculado** (el SL estructural, sin tope). Si la pérdida en USD del SL estructural supera este tope, se acerca el SL al límite. | `0.0` o `> 0` (USD) | `0.0` para respetar el SL estructural; `20` para tope de $20/operación |
 
-### 2.5 Capa de probabilidad (scoring ponderado)
+### 2.5 Capa de probabilidad (Naive Bayes entrenado)
 
-> El scoring es un **filtro adicional** opcional después de la señal clásica. **`InpScoreThreshold = 0.0` desactiva** el filtro y el bot se comporta como antes (booleano puro).
+> La probabilidad **ya no se calcula con pesos manuales**: la calcula un **modelo Naive Bayes embebido** (`Scoring/TP_NaiveBayes.mqh`) que fue entrenado **offline con 84 operaciones reales** etiquetadas (62 ganadoras / 22 perdedoras) extraídas de la telemetría. No hay nada que calibrar a ojo: los pesos los aprendió el modelo de los datos.
+>
+> El scoring es un **filtro adicional** opcional después de la señal clásica. Con `InpNBActivo = false` o `InpScoreThreshold = 0.0` el bot se comporta como antes (booleano puro).
 
 | Input | Default | Qué significa | Valores | Guía |
 |-------|---------|---------------|---------|------|
-| `InpScoreThreshold` | `0.0` | **Probabilidad mínima (%)** para emitir señal. **0.0 = desactivado** (no filtra). Es el "F7" del panel: si la probabilidad calculada está por debajo, no señala. | `0.0`, o `50`–`100` | **Empieza en `0.0`** (neutral). Para filtrar: `66`–`75` solo señales altamente alineadas |
-| `InpW_Tendencia` | `1.0` | **Peso** de la tendencia local en el cálculo de probabilidad. | `0` o `> 0` (relativo) | `1.0` (neutro). Sube a `1.5` si quieres priorizar la tendencia local |
-| `InpW_Htf` | `1.0` | **Peso** del sesgo del timeframe superior. | `0` o `> 0` (relativo) | `1.0` (neutro) |
-| `InpW_Setup` | `1.0` | **Peso** del setup estructural. | `0` o `> 0` (relativo) | `1.0` (neutro) |
-| `InpW_Sesion` | `0.0` | **Peso** de la ventana de sesión. `0.0` = **inactivo** (la sesión no puntúa). El feature de sesión aporta un **factor 0.00–1.00** según el momento: solape Londres+NY=1.0, inicio=0.8, media=0.5, cierre=0.3, fuera de ventanas=0.0. | `0.0`, o `> 0` (relativo) | **Empieza en `0.0`** (sin sesgo). Actívalo (`1.0`) cuando quieras que las horas de alta liquidez pesen más |
+| `InpNBActivo` | `false` | **Activa el modelo Naive Bayes entrenado** para calcular la probabilidad de ganar. `false` = sin filtro probabilístico (solo señal clásica). | `true` / `false` | **Empieza en `false`**. Actívalo solo con un `InpScoreThreshold` coherente: con NB apagado y threshold `> 0` la probabilidad es `0` y el filtro no deja pasar nada |
+| `InpScoreThreshold` | `0.0` | **Probabilidad mínima (%)** para emitir señal. Sigue siendo la **puerta de confianza**: con NB activo, solo señala si `P(ganar)` del modelo supera este %. **0.0 = desactivado** (no filtra). | `0.0`, o `50`–`100` | **Empieza en `0.0`** (informativo). Con NB activo, `66`–`75` solo señales altamente alineadas |
 
-**Cómo funcionan los pesos juntos** (ejemplo con los tres activos):
+**Features que usa el modelo** (idénticas a las que registra `TP_TEL|ENTRADA`):
 
-```
-Si tendencia+HTF+setup a favor:  P = (1+1+1)/(3)        = 100%
-Si 2 de 3 a favor:              P = (1+1)/(3)          = 66.7%
-Si 1 de 3 a favor:              P = (1)/(3)            = 33.3%
-```
+| Feature | Valores posibles |
+|---------|------------------|
+| `dir` | `BUY` / `SELL` |
+| `tend` | `BULL` / `BEAR` / `RANGO` |
+| `htf` | `BULL` / `BEAR` / `NEUTRO` |
+| `setup` | `BUY` / `SELL` / `NINGUNO` |
+| `sesion` | `LONDON` / `LONDON_NEWYORK` / `NEW_YORK` / `TOKYO` / `SYDNEY` |
 
-**IMPORTANTE — valores recomendados para empezar (sin sesgo):**
+El modelo aplica suavizado de Laplace (`a=1`) y normalización en log-espacio, por eso devuelve un porcentaje estable entre `0` y `100` para cualquier combinación.
 
-- `InpScoreThreshold = 0.0` (arranca **informativo**, no filtra)
-- `InpW_Tendencia = 1.0`, `InpW_Htf = 1.0`, `InpW_Setup = 1.0` (equitativos, **sin sesgo** entre ellos)
-- `InpW_Sesion = 0.0` (sesión inactiva)
-
-> **Por qué estos valores:** los pesos `1.0/1.0/1.0` son **neutrales** entre features. No cambies los pesos hasta tener **datos reales etiquetados**. Con threshold en 0, el scoring es informativo y te deja **recolectar una base honesta e imparcial** para decidir después con datos, no con intuición.
+> **Por qué así:** el modelo se entrenó con las operaciones reales del usuario, así que las probabilidades reflejan **su** data y no intuiciones. El threshold sigue siendo la decisión de negocio: el modelo dice cuánto, tú decides cuánto exiges. Con `InpScoreThreshold = 0.0` el scoring es informativo y puedes observar la probabilidad antes de dejar que filtre.
 
 ---
 
-## 3. Hoja de ruta de los pesos
+## 3. Hoja de ruta del scoring
 
-- **Hoy:** pesos **estáticos** (los inputs de la sección 2.5) y threshold manual. Esto es el *andamiaje*.
-- **Futuro (Fase 3.5b — pesos dinámicos / Naive Bayes):** cuando haya **~100+ operaciones etiquetadas** (que la telemetría `TP_TEL|*` ya registra), los pesos pasarán a **aprenderse de los datos**:
+- **Hoy:** modelo **Naive Bayes embebido** (84 operaciones etiquetadas) + threshold manual como puerta.
+- **Próximo paso (Fase 3.5b — reentrenamiento):** la telemetría `TP_TEL|ENTRADA` / `TP_TEL|RESULTADO` sigue registrando los outcomes, así que el modelo se puede **reentrenar** con más data cuando haya nuevas operaciones etiquetadas:
   - `P(feature | ganadora) = ganadoras_con_feature / ganadoras`
   - `P(feature | perdedora) = perdedoras_con_feature / perdedoras`
-  - El peso de cada feature derivará de **cuánto discrimina** ganar/perder en tu data real.
-  - Dos implementaciones posibles: **reentrenamiento manual** (un comando) o **auto-reentrenamiento con umbral** (cada N operaciones, con validación anti-sobreajuste).
-  - El módulo `TP_ProbabilityScorer` se reutiliza tal cual; solo cambia quién define los pesos.
+  - Con 84 muestras el modelo es un **punto de partida**: más operaciones etiquetadas = menos sobreajuste y probabilidades más confiables.
+  - Dos opciones: **reentrenamiento manual** (regenerar el `.mqh` con un comando) o **auto-reentrenamiento con umbral** (cada N operaciones, con validación anti-sobreajuste).
+  - El módulo `TP_ProbabilityScorer` se reutiliza tal cual; solo cambia el archivo generado del modelo.
 
 ---
 
@@ -145,7 +142,7 @@ Si 1 de 3 a favor:              P = (1)/(3)            = 33.3%
 | Pérdida diaria | `InpMaxPerdida = 50.0` USD (ajusta según tu cuenta) |
 | Trailing | `InpTrailMinProfit = 10.0`, step `5.0`, increase `5.0`, TP `true` |
 | MaxSL | `InpMaxSL = 20.0` USD (tope por operación) |
-| Scoring | Threshold `0.0`, pesos `1.0/1.0/1.0/0.0` (neutral / informativo) |
+| Scoring | `InpNBActivo = false`, `InpScoreThreshold = 0.0` (sin filtro probabilístico) |
 
 > Ajusta `InpMaxPerdida` y `InpMaxSL` al tamaño de tu cuenta. **Empieza con la cuenta demo** y deja que la telemetría acumule datos.
 
@@ -163,4 +160,5 @@ Si 1 de 3 a favor:              P = (1)/(3)            = 33.3%
 
 ## 6. Notas de la versión
 
+- **v1.01**: la probabilidad del scoring la calcula un **modelo Naive Bayes entrenado con 84 operaciones reales** (reemplaza los pesos manuales por `InpW_*`); se activa con `InpNBActivo` y `InpScoreThreshold` sigue siendo la puerta de confianza.
 - **v1.00**: scooping probabilístico ponderado, sesión variable, telemetría por operación, contadores de evaluación, MaxSL en USD, trailing SL/TP, protección multi-instancia.

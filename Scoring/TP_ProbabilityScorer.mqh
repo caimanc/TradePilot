@@ -4,32 +4,41 @@
 #include "../MarketState/TP_MarketState.mqh"
 #include "../Sessions/TP_Sessions.mqh"
 #include "../MarketAnalysis/TP_DeltaFlow.mqh"
+#include "TP_NaiveBayes.mqh"
 
 //+------------------------------------------------------------------+
-//| Scorer probabilistico (scoring ponderado)                        |
+//| Scorer probabilistico (Naive Bayes opcional)                     |
 //|                                                                  |
-//| P(dir) = Suma(w_i x f_i(dir)) / Suma(w_i)                        |
+//| P(dir) = modelo.ProbabilidadGanar(dir, tend, htf,               |
+//|                                   setup, sesion)        0..100  |
 //|                                                                  |
-//| Cada feature (tendencia, HTF, setup, sesion) aporta un peso.     |
-//| La sesion aporta un FACTOR CONTINUO (0..1) por su peso:          |
-//|   - solape (Londres+NY) : factor 1.0   (máximo)                  |
-//|   - inicio de sesion    : factor 0.7                             |
-//|   - media sesion        : factor 0.5                             |
-//|   - valle / cierre      : factor 0.3                             |
-//|   - fuera de sesiones   : factor 0.0 (no aporta)                 |
+//| El modelo de TP_NaiveBayes.mqh es VIVO: aprende de las          |
+//| operaciones cerradas del propio EA (ventana deslizante) y se     |
+//| persiste en MQL5/Files/TradePilot_NB.csv. Ya no hay pesos        |
+//| manuales: las features son categoricas y el modelo aprende      |
+//| P(feature | ganar / perder).                                     |
 //|                                                                  |
-//| Threshold = 0 desactiva el filtro (comportamiento clasico).      |
-//| Andamiaje para un futuro Naive Bayes con datos etiquetados.      |
+//| InpNBActivo = false  -> el scorer no restringe nada              |
+//| (pBuy/pSell quedan en 0; un threshold olvidado no bloquea).     |
+//|                                                                  |
+//| El threshold sigue siendo la PUERTA de confianza, y solo filtra  |
+//| cuando NB está activo:                                           |
+//|   InpNBActivo=true  y  threshold>0  -> filtro por probabilidad.  |
+//|   threshold = 0  o  NB apagado      -> comportamiento clasico.   |
 //+------------------------------------------------------------------+
 class CTPProbabilityScorer
 {
 private:
 
    double m_threshold;
-   double m_wTendencia;
-   double m_wHtf;
-   double m_wSetup;
-   double m_wSesion;
+
+   bool m_nbActivo;
+
+   //--------------------------------------------------
+   // Modelo vivo (aprendizaje en linea)
+   //--------------------------------------------------
+
+   CTPNaiveBayes *m_model;
 
    double m_pBuy;
    double m_pSell;
@@ -44,21 +53,12 @@ private:
 
    bool m_deltaActivo;
 
-   double m_wDelta;
-
    CTPDeltaFlow *m_deltaFlow;
 
    //--------------------------------------------------
-   // Peso activo de cada feature (0 si peso en 0)
-   //--------------------------------------------------
-
-   double WActivo(double w)
-   {
-      return (w > 0.0) ? w : 0.0;
-   }
-
-   //--------------------------------------------------
    // Factor continuo de sesion (0..1)
+   // Solo informativo para el panel: no participa en
+   // el calculo de probabilidad del modelo.
    //--------------------------------------------------
 
    double FactorSesion()
@@ -106,29 +106,6 @@ private:
       return 0.3;         // cierre / valle
    }
 
-   //--------------------------------------------------
-   // Suma de pesos activos
-   //--------------------------------------------------
-
-   double SumaPesos()
-   {
-      double suma = 0.0;
-
-      suma += WActivo(m_wTendencia);
-      suma += WActivo(m_wHtf);
-      suma += WActivo(m_wSetup);
-
-      // La sesion cuenta en el denominador solo si tiene peso
-      if(m_wSesion > 0.0)
-         suma += m_wSesion;
-
-      // El delta cuenta solo si el interruptor esta activo
-      if(m_deltaActivo && m_deltaFlow != NULL)
-         suma += m_wDelta;
-
-      return suma;
-   }
-
 public:
 
    //--------------------------------------------------
@@ -137,37 +114,44 @@ public:
 
    CTPProbabilityScorer()
    {
-      m_threshold  = 0.0;
-      m_wTendencia = 1.0;
-      m_wHtf       = 1.0;
-      m_wSetup     = 1.0;
-      m_wSesion    = 0.0;
+      m_threshold = 0.0;
+      m_nbActivo  = false;
+
+      m_model = NULL;
 
       m_pBuy        = 0.0;
       m_pSell       = 0.0;
       m_sesionFactor = 0.0;
 
       m_deltaActivo = false;
-      m_wDelta      = 1.0;
       m_deltaFlow   = NULL;
    }
 
    //--------------------------------------------------
-   // Configurar pesos y umbral
+   // Configurar umbral de confianza
    //--------------------------------------------------
 
-   void SetParams(
-      double threshold,
-      double wTendencia,
-      double wHtf,
-      double wSetup,
-      double wSesion)
+   void SetParams(double threshold)
    {
-      m_threshold  = threshold;
-      m_wTendencia = wTendencia;
-      m_wHtf       = wHtf;
-      m_wSetup     = wSetup;
-      m_wSesion    = wSesion;
+      m_threshold = threshold;
+   }
+
+   //--------------------------------------------------
+   // Activar/desactivar el calculo con Naive Bayes
+   //--------------------------------------------------
+
+   void SetNBActivo(bool activo)
+   {
+      m_nbActivo = activo;
+   }
+
+   //--------------------------------------------------
+   // Conectar el modelo vivo (NB aprende en linea)
+   //--------------------------------------------------
+
+   void SetModel(CTPNaiveBayes &model)
+   {
+      m_model = GetPointer(model);
    }
 
    //--------------------------------------------------
@@ -176,7 +160,7 @@ public:
 
    void SetSessions(int brokerUtcOffset)
    {
-      // Solo Londres + NY activas para el factor
+      // Solo Londres + NY activas para el factor informativo
       m_sessions.Initialize(
          brokerUtcOffset,
          false,   // Sydney
@@ -207,75 +191,59 @@ public:
    {
       m_sessions.Update();
 
+      // Solo informativo para el panel
       m_sesionFactor = FactorSesion();
 
-      double suma = SumaPesos();
-
-      if(suma <= 0.0)
+      if(!m_nbActivo)
       {
          m_pBuy  = 0.0;
          m_pSell = 0.0;
          return;
       }
 
-      double scoreBuy  = 0.0;
-      double scoreSell = 0.0;
-
-      //--------------------------------------------------
-      // Tendencia local
-      //--------------------------------------------------
-
-      if(m_wTendencia > 0.0)
+      // Sin modelo conectado no hay probabilidad que aplicar
+      if(m_model == NULL)
       {
-         if(marketState.IsBullTrend()) scoreBuy  += m_wTendencia;
-         if(marketState.IsBearTrend()) scoreSell += m_wTendencia;
+         m_pBuy  = 0.0;
+         m_pSell = 0.0;
+         return;
       }
 
       //--------------------------------------------------
-      // Sesgo del tf superior
+      // Features categoricas (mismas que registra la
+      // telemetria en TP_TEL|ENTRADA)
       //--------------------------------------------------
 
-      if(m_wHtf > 0.0)
-      {
-         if(marketState.IsHtfBull())   scoreBuy  += m_wHtf;
-         if(marketState.IsHtfBear())   scoreSell += m_wHtf;
-      }
+      string tend = marketState.IsBullTrend() ? "BULL" :
+                    (marketState.IsBearTrend() ? "BEAR" : "RANGO");
+
+      string htf = marketState.IsHtfBull() ? "BULL" :
+                   (marketState.IsHtfBear() ? "BEAR" : "NEUTRO");
+
+      string setup = marketState.IsBuySetupValid() ? "BUY" :
+                     (marketState.IsSellSetupValid() ? "SELL" : "NINGUNO");
+
+      string sesion = m_sessions.CurrentSession();
 
       //--------------------------------------------------
-      // Setup estructural
+      // Modelo Naive Bayes
       //--------------------------------------------------
 
-      if(m_wSetup > 0.0)
-      {
-         if(marketState.IsBuySetupValid())  scoreBuy  += m_wSetup;
-         if(marketState.IsSellSetupValid()) scoreSell += m_wSetup;
-      }
+      double pBuy  = m_model.ProbabilidadGanar(
+                        "BUY",  tend, htf, setup, sesion);
 
-      //--------------------------------------------------
-      // Sesion (factor continuo aplicado en ambas direcciones)
-      //--------------------------------------------------
+      double pSell = m_model.ProbabilidadGanar(
+                        "SELL", tend, htf, setup, sesion);
 
-      if(m_wSesion > 0.0)
-      {
-         scoreBuy  += m_wSesion * m_sesionFactor;
-         scoreSell += m_wSesion * m_sesionFactor;
-      }
+      // Modelo no disponible: no restringe con probabilidades invalidas
+      if(pBuy < 0.0)
+         pBuy = 0.0;
 
-      //--------------------------------------------------
-      // Flujo/delta (feature opcional)
-      // Delta positivo favorece compra; negativo, venta
-      //--------------------------------------------------
+      if(pSell < 0.0)
+         pSell = 0.0;
 
-      if(m_deltaActivo && m_deltaFlow != NULL)
-      {
-         double fDelta = (m_deltaFlow.DeltaNorm() + 1.0) / 2.0;
-
-         scoreBuy  += m_wDelta *    fDelta;
-         scoreSell += m_wDelta * (1.0 - fDelta);
-      }
-
-      m_pBuy  = scoreBuy  / suma * 100.0;
-      m_pSell = scoreSell / suma * 100.0;
+      m_pBuy  = pBuy;
+      m_pSell = pSell;
    }
 
    //--------------------------------------------------
@@ -284,7 +252,15 @@ public:
 
    bool Enabled() const
    {
-      return m_threshold > 0.0;
+      // El filtro solo aplica cuando el modelo NB esta activo
+      // y el umbral de confianza es > 0. Con NB apagado, un
+      // threshold olvidado NO debe bloquear las senales clasicas.
+      return m_nbActivo && m_threshold > 0.0;
+   }
+
+   bool NBActivo() const
+   {
+      return m_nbActivo;
    }
 
    double Threshold() const

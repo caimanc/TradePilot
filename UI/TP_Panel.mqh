@@ -319,25 +319,27 @@ public:
       }
 
       //--------------------------------------------------
-      // Riesgo diario
+      // Riesgo diario (neto del día: +ganancia / -pérdida)
       //--------------------------------------------------
 
-      double perdida = riskManager.DailyLoss();
+      double netoDia = riskManager.DailyNet();
 
       color clrRiesgo = clrSilver;
 
-      if(perdida >= riskManager.MaxDailyLoss())
+      if(netoDia <= -riskManager.MaxDailyLoss())
          clrRiesgo = clrTomato;
 
-      else if(perdida > 0.0)
+      else if(netoDia < 0.0)
          clrRiesgo = clrOrange;
+
+      else if(netoDia > 0.0)
+         clrRiesgo = clrLime;
 
       Escribir(
          "RIESGO",
          StringFormat(
-            "Perdida dia : %.2f / %.2f USD",
-            perdida,
-            riskManager.MaxDailyLoss()
+            "Ganancia dia: %.2f USD",
+            netoDia
          ),
          clrRiesgo
       );

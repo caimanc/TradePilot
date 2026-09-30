@@ -223,6 +223,15 @@ public:
    }
 
    //--------------------------------------------------
+   // Conectar el modelo que aprende de la telemetria
+   //--------------------------------------------------
+
+   void SetNBModel(CTPNaiveBayes &model)
+   {
+      m_telemetry.SetNBModel(model);
+   }
+
+   //--------------------------------------------------
    // Actualización (llamar cada tick)
    //--------------------------------------------------
 

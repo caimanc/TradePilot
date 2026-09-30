@@ -60,20 +60,16 @@ input bool   InpTrailTP               = true; // true = extiende el TP con el SL
 input double InpMaxSL = 0.0;  // Maximo SL por operacion en USD. 0 = sin limite
 
 //--------------------------------------------------
-// FILTRO DE PROBABILIDAD (scoring ponderado)
-// P(de senalar) = suma de pesos / suma total x 100.
+// FILTRO DE PROBABILIDAD (Naive Bayes entrenado)
+// P(de senalar) lo calcula un modelo Naive Bayes entrenado
+// con operaciones reales (tendencia, HTF, setup, sesion).
+// InpNBActivo = false = sin filtro probabilistico (clasico).
 // Threshold 0 = desactivado: usa el metodo clasico (si/no).
-// Threshold >0 (ej.: 60) = solo senala si la probabilidad es >= ese %.
-// Los pesos regulan cuanta importancia da cada factor (0..1):
-//   peso 1 = influye a plena potencia; peso 0 = ignora ese factor.
-//   Sesion: 0 = ignora la hora del dia; >0 = favorece horas de mayor actividad.
+// Threshold >0 (ej.: 70) = solo senala si P(ganar) del modelo >= ese %.
 //--------------------------------------------------
 
 input double InpScoreThreshold = 0.0;  // Probabilidad minima % para senalar. 0 = desactivado
-input double InpW_Tendencia    = 1.0;  // Peso de la tendencia local (0..1)
-input double InpW_Htf          = 1.0;  // Peso del sesgo del timeframe superior (0..1)
-input double InpW_Setup        = 1.0;  // Peso del setup estructural (0..1)
-input double InpW_Sesion       = 0.0;  // Peso de la ventana de sesion/hora (0..1)
+input bool   InpNBActivo       = false; // Usa Naive Bayes como calculo de probabilidad
 
 //--------------------------------------------------
 // PATRONES DE VELA (suficiencia, no necesidad)
@@ -95,7 +91,7 @@ input bool   InpPatronAgotamiento = true;  // Modo 3: salida por agotamiento (pa
 
 input bool   InpVWAPActivo    = false; // Filtro direccional VWAP + TP dinámico al VWAP
 input bool   InpBarridoActivo = false; // Patrones reforzados por barrido de liquidez
-input bool   InpDeltaActivo   = false; // Feature de flujo/delta en el scoring
+input bool   InpDeltaActivo   = false; // Modulo de flujo/delta (informativo, no altera la probabilidad)
 input bool   InpPerfilActivo  = false; // SL/TP conscientes del perfil de volumen
 
 //--------------------------------------------------
@@ -123,12 +119,9 @@ int OnInit()
          InpTrailStep,
          InpTrailStepIncrease,
          InpTrailTP,
-         InpMaxSL,
+          InpMaxSL,
           InpScoreThreshold,
-          InpW_Tendencia,
-          InpW_Htf,
-          InpW_Setup,
-          InpW_Sesion,
+          InpNBActivo,
 InpPatronesActivo,
            InpPatronEntrada,
            InpPatronAgotamiento,

@@ -5,6 +5,7 @@
 #include "TP_PatternDetector.mqh"
 #include "../MarketState/TP_MarketState.mqh"
 #include "../Scoring/TP_ProbabilityScorer.mqh"
+#include "../Scoring/TP_NaiveBayes.mqh"
 #include "../MarketAnalysis/TP_VWAP.mqh"
 #include "../MarketAnalysis/TP_SweepDetector.mqh"
 #include "../MarketAnalysis/TP_DeltaFlow.mqh"
@@ -108,18 +109,19 @@ public:
 
    void SetScoreParams(
       double threshold,
-      double wTendencia,
-      double wHtf,
-      double wSetup,
-      double wSesion)
+      bool nbActivo)
    {
-      m_probabilityScorer.SetParams(
-         threshold,
-         wTendencia,
-         wHtf,
-         wSetup,
-         wSesion
-      );
+      m_probabilityScorer.SetParams(threshold);
+      m_probabilityScorer.SetNBActivo(nbActivo);
+   }
+
+   //--------------------------------------------------
+   // Conectar el modelo vivo del scoring
+   //--------------------------------------------------
+
+   void SetNBModel(CTPNaiveBayes &model)
+   {
+      m_probabilityScorer.SetModel(model);
    }
 
    //--------------------------------------------------
@@ -332,6 +334,11 @@ public:
    bool ScoreEnabled() const
    {
       return m_probabilityScorer.Enabled();
+   }
+
+   bool ScoreNBActivo() const
+   {
+      return m_probabilityScorer.NBActivo();
    }
 
    double SesionFactor() const

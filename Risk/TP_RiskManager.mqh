@@ -22,6 +22,7 @@ private:
 
    double m_maxDailyLoss;
    double m_dailyLoss;
+   double m_dailyNet;   // neto firmado del día (+ganancia / -pérdida)
 
    int    m_tradeCount;
    int    m_maxTrades;
@@ -35,10 +36,11 @@ private:
    int  m_currentDay;
 
    //--------------------------------------------------
-   // Pérdida neta realizada hoy (deals propios cerrados)
+   // Resultado neto del día (firmado: +ganancia / -pérdida)
+   // (deals propios cerrados)
    //--------------------------------------------------
 
-   double PerdidaDiariaRealizada()
+   double ResultadoDiarioRealizado()
    {
       datetime inicioDia =
          TimeCurrent() - TimeCurrent() % 86400;
@@ -82,7 +84,16 @@ private:
             HistoryDealGetDouble(ticket, DEAL_COMMISSION);
       }
 
-      return MathMax(0.0, -resultado);
+      return resultado;
+   }
+
+   //--------------------------------------------------
+   // Pérdida neta realizada hoy (deals propios cerrados)
+   //--------------------------------------------------
+
+   double PerdidaDiariaRealizada()
+   {
+      return MathMax(0.0, -ResultadoDiarioRealizado());
    }
 
 public:
@@ -95,6 +106,7 @@ public:
    {
       m_maxDailyLoss = 50.0;
       m_dailyLoss = 0.0;
+      m_dailyNet  = 0.0;
 
       m_tradeCount = 0;
       m_maxTrades = 5;
@@ -166,6 +178,7 @@ public:
       if(diaActual != m_currentDay)
       {
          m_dailyLoss = 0.0;
+         m_dailyNet  = 0.0;
 
          m_tradeCount = 0;
 
@@ -175,6 +188,7 @@ public:
       m_positionSizer.Calculate();
 
       m_dailyLoss = PerdidaDiariaRealizada();
+      m_dailyNet  = ResultadoDiarioRealizado();
    }
 
    //--------------------------------------------------
@@ -193,6 +207,15 @@ public:
    double DailyLoss() const
    {
       return m_dailyLoss;
+   }
+
+   //--------------------------------------------------
+   // Neto del día firmado (+ganancia / -pérdida)
+   //--------------------------------------------------
+
+   double DailyNet() const
+   {
+      return m_dailyNet;
    }
 
    double MaxDailyLoss() const

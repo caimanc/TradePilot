@@ -2,16 +2,18 @@
 #define __TP_TELEMETRY_MQH__
 
 #include "../Signals/TP_SignalManager.mqh"
+#include "../Scoring/TP_NaiveBayes.mqh"
 
 //+------------------------------------------------------------------+
 //| Telemetria por operacion                                         |
 //|                                                                  |
 //| Registra en el log educativo cada operacion (entrada/cierre)     |
-//| con los features activos, para el futuro Naive Bayes (fase 3.5b) |
+//| con los features activos, para el Naive Bayes vivo               |
 //| y para medir el impacto de noticias de forma externa.            |
 //|                                                                  |
-//| NO guarda archivos: emite lineas prefijadas TP_TEL para que      |
-//| puedan filtrarse y procesarse fuera.                             |
+//| Ademas, alimenta el aprendizaje: guarda las features de la       |
+//| entrada y al cerrar entrega la muestra (features + resultado)    |
+//| al modelo, que persiste su ventana deslizante en un CSV.         |
 //+------------------------------------------------------------------+
 class CTPTelemetry
 {
@@ -30,6 +32,22 @@ private:
    datetime m_openTime;
    double   m_openPrice;
 
+   //--------------------------------------------------
+   // Features de la entrada (muestra para el NB)
+   //--------------------------------------------------
+
+   string m_openDir;
+   string m_openTend;
+   string m_openHtf;
+   string m_openSetup;
+   string m_openSesion;
+
+   //--------------------------------------------------
+   // Modelo vivo (aprendizaje en linea)
+   //--------------------------------------------------
+
+   CTPNaiveBayes *m_model;
+
 public:
 
    //--------------------------------------------------
@@ -44,6 +62,23 @@ public:
       m_tracked     = false;
       m_openTime    = 0;
       m_openPrice   = 0.0;
+
+      m_openDir    = "";
+      m_openTend   = "";
+      m_openHtf    = "";
+      m_openSetup  = "";
+      m_openSesion = "";
+
+      m_model = NULL;
+   }
+
+   //--------------------------------------------------
+   // Conectar el modelo que aprende de la telemetria
+   //--------------------------------------------------
+
+   void SetNBModel(CTPNaiveBayes &model)
+   {
+      m_model = GetPointer(model);
    }
 
    //--------------------------------------------------
@@ -91,6 +126,17 @@ public:
 
       string setup = marketState.IsBuySetupValid() ? "BUY" :
                      (marketState.IsSellSetupValid() ? "SELL" : "NINGUNO");
+
+      //--------------------------------------------------
+      // Se guardan para que al cerrar la operacion el
+      // modelo pueda aprender de esta muestra
+      //--------------------------------------------------
+
+      m_openDir    = direccion;
+      m_openTend   = tend;
+      m_openHtf    = htf;
+      m_openSetup  = setup;
+      m_openSesion = signals.SesionName();
 
       Print(
          "TP_TEL|ENTRADA|",
@@ -154,6 +200,29 @@ public:
             "|timeOpen=", TimeToString(m_openTime),
             "|priceOpen=", DoubleToString(m_openPrice, 5)
          );
+
+         //--------------------------------------------------
+         // Aprendizaje: la operacion cerrada es una muestra
+         // nueva del modelo (features de entrada + resultado)
+         //--------------------------------------------------
+
+         if(m_model != NULL)
+         {
+            m_model.AddSample(
+               m_openDir,
+               m_openTend,
+               m_openHtf,
+               m_openSetup,
+               m_openSesion,
+               (resultadoNeto > 0.0) ? 1 : 0
+            );
+         }
+
+         m_openDir     = "";
+         m_openTend    = "";
+         m_openHtf     = "";
+         m_openSetup   = "";
+         m_openSesion  = "";
 
          m_tracked     = false;
          m_openTicket  = 0;

@@ -29,6 +29,7 @@
 #include "../MarketState/TP_MarketState.mqh"
 
 #include "../Scoring/TP_ProbabilityScorer.mqh"
+#include "../Scoring/TP_NaiveBayes.mqh"
 
 #include "../Signals/TP_SignalManager.mqh"
 
@@ -159,6 +160,14 @@ private:
    CTPMonitor m_monitor;
 
 
+   //==================================================
+   // Naive Bayes vivo (aprende de las operaciones
+   // cerradas vía telemetría)
+   //==================================================
+
+   CTPNaiveBayes m_naiveBayes;
+
+
 public:
 
    //==================================================
@@ -190,10 +199,7 @@ public:
       bool   trailTP           = true,
       double maxSL             = 0.0,
        double scoreThreshold    = 0.0,
-       double wTendencia        = 1.0,
-       double wHtf              = 1.0,
-       double wSetup            = 1.0,
-       double wSesion           = 0.0,
+       bool   nbActivo          = false,
        bool   patronActivo      = false,
        bool   patronEntrada     = true,
        bool   patronAgotamiento = true,
@@ -428,16 +434,24 @@ public:
 
 
       //--------------------------------------------------
-      // Capa de probabilidad (scoring)
+      // Capa de probabilidad (Naive Bayes)
       //--------------------------------------------------
 
       m_signalManager.SetScoreParams(
          scoreThreshold,
-         wTendencia,
-         wHtf,
-         wSetup,
-         wSesion
+         nbActivo
       );
+
+      //--------------------------------------------------
+      // Naive Bayes vivo: carga la ventana deslizante y la
+      // conecta al scoring (restricción) y a la telemetría
+      // (aprendizaje)
+      //--------------------------------------------------
+
+      m_naiveBayes.Initialize();
+
+      m_signalManager.SetNBModel(m_naiveBayes);
+      m_monitor.SetNBModel(m_naiveBayes);
 
       // Análisis avanzado (opcional)
       m_vwap.SetPriceSeries(m_priceSeries);
@@ -1209,6 +1223,13 @@ public:
       //--------------------------------------------------
 
       GlobalVariableDel(NombreGlobal());
+
+
+      //--------------------------------------------------
+      // Naive Bayes vivo: persistir la ventana actual
+      //--------------------------------------------------
+
+      m_naiveBayes.Save();
 
 
       //--------------------------------------------------
