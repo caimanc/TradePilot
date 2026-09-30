@@ -28,6 +28,16 @@ private:
    int    m_maxTrades;
 
    //--------------------------------------------------
+   // Drawdown total y hard stop
+   //--------------------------------------------------
+
+   double m_maxDrawdownPct;   // % sobre equity pico. 0 = desactivado
+   bool   m_hardStop;         // true = cerrar todo y detener el EA
+   double m_peakEquity;       // equity mas alto visto desde el arranque
+   double m_drawdownPct;      // drawdown actual (0..100)
+   bool   m_hardStopTriggered; // se dispara una sola vez
+
+   //--------------------------------------------------
    // Identidad y día corriente
    //--------------------------------------------------
 
@@ -114,6 +124,12 @@ public:
       m_magicNumber = 0;
 
       m_currentDay = 0;
+
+      m_maxDrawdownPct  = 0.0;
+      m_hardStop        = false;
+      m_peakEquity      = 0.0;
+      m_drawdownPct     = 0.0;
+      m_hardStopTriggered = false;
    }
 
    //--------------------------------------------------
@@ -124,7 +140,9 @@ public:
       long   magicNumber  = 0,
       double volumenManual = 0.0,
       int    maxTrades     = 0,
-      double maxDailyLoss  = 50.0)
+      double maxDailyLoss  = 50.0,
+      double maxDrawdownPct = 0.0,
+      bool   hardStop       = false)
    {
       if(!m_positionSizer.Initialize())
          return false;
@@ -133,6 +151,12 @@ public:
 
       m_maxTrades    = maxTrades;
       m_maxDailyLoss = maxDailyLoss;
+
+      m_maxDrawdownPct  = maxDrawdownPct;
+      m_hardStop        = hardStop;
+      m_peakEquity      = AccountInfoDouble(ACCOUNT_EQUITY);
+      m_drawdownPct     = 0.0;
+      m_hardStopTriggered = false;
 
       m_positionSizer.SetVolumeOverride(
          volumenManual
@@ -154,6 +178,16 @@ public:
          "Max Perdida     : ",
          DoubleToString(m_maxDailyLoss, 2),
          " USD"
+      );
+
+      Print(
+         "Max Drawdown    : ",
+         m_maxDrawdownPct <= 0.0 ? "DESACTIVADO" : DoubleToString(m_maxDrawdownPct, 1) + " %"
+      );
+
+      Print(
+         "Hard Stop       : ",
+         m_hardStop ? "ACTIVO (cierra todo y detiene el EA)" : "off"
       );
 
       return true;
@@ -189,6 +223,36 @@ public:
 
       m_dailyLoss = PerdidaDiariaRealizada();
       m_dailyNet  = ResultadoDiarioRealizado();
+
+      //--------------------------------------------------
+      // Drawdown total sobre el equity pico
+      // (incluye ganancia/pérdida flotante, no solo cerrado)
+      //--------------------------------------------------
+
+      if(m_maxDrawdownPct > 0.0)
+      {
+         double equity = AccountInfoDouble(ACCOUNT_EQUITY);
+
+         if(equity > m_peakEquity)
+            m_peakEquity = equity;
+
+         if(m_peakEquity > 0.0)
+            m_drawdownPct = (m_peakEquity - equity) / m_peakEquity * 100.0;
+
+         if(m_drawdownPct >= m_maxDrawdownPct && !m_hardStopTriggered)
+         {
+            m_hardStopTriggered = true;
+
+            Print("ALERTA DRAWDOWN: ",
+                  DoubleToString(m_drawdownPct, 1), " % sobre equity pico (",
+                  DoubleToString(m_maxDrawdownPct, 1), " % limite).");
+
+            if(m_hardStop)
+               Print("HARD STOP: se cerraran todas las posiciones y el EA se detendra.");
+            else
+               Print("Nuevas operaciones bloqueadas hasta reiniciar.");
+         }
+      }
    }
 
    //--------------------------------------------------
@@ -223,6 +287,25 @@ public:
       return m_maxDailyLoss;
    }
 
+   //--------------------------------------------------
+   // Drawdown total (0..100 %) y hard stop
+   //--------------------------------------------------
+
+   double DrawdownPct() const
+   {
+      return m_drawdownPct;
+   }
+
+   double MaxDrawdownPct() const
+   {
+      return m_maxDrawdownPct;
+   }
+
+   bool HardStopTriggered() const
+   {
+      return m_hardStopTriggered;
+   }
+
    int TradeCount() const
    {
       return m_tradeCount;
@@ -244,6 +327,12 @@ public:
 
    bool CanOpenTrade() const
    {
+      if(m_hardStopTriggered)
+         return false;
+
+      if(m_maxDrawdownPct > 0.0 && m_drawdownPct >= m_maxDrawdownPct)
+         return false;
+
       if(m_dailyLoss >= m_maxDailyLoss)
          return false;
 

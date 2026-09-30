@@ -203,11 +203,13 @@ public:
        bool   patronActivo      = false,
        bool   patronEntrada     = true,
        bool   patronAgotamiento = true,
-       bool   vwapActivo        = false,
+bool   vwapActivo        = false,
        bool   barridoActivo     = false,
        bool   deltaActivo       = false,
-       bool   perfilActivo      = false)
-   {
+       bool   perfilActivo      = false,
+       double maxDrawdownPct    = 0.0,
+       bool   hardStop          = false)
+    {
       Print("====================================");
       Print("Inicializando TradePilot...");
       Print("====================================");
@@ -387,7 +389,9 @@ public:
             m_config.MagicNumber(),
             volumenManual,
             maxTrades,
-            maxPerdida))
+            maxPerdida,
+            maxDrawdownPct,
+            hardStop))
       {
          Print("ERROR inicializando RiskManager.");
          return false;
@@ -539,6 +543,23 @@ public:
       //==================================================
 
       m_riskManager.Update();
+
+      //--------------------------------------------------
+      // HARD STOP: si el RiskManager lo disparo (drawdown
+      // maximo con hardStop activo), cerrar TODO y detener
+      // el EA. Se evalúa por tick, antes del gate de vela.
+      //--------------------------------------------------
+
+      if(m_riskManager.HardStopTriggered())
+      {
+         m_tradeManager.CerrarTodasPropias();
+
+         Print("HARD STOP: drawdown maximo alcanzado. TradePilot detenido.");
+
+         ExpertRemove();
+
+         return;
+      }
 
 
       //==================================================

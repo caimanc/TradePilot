@@ -719,6 +719,40 @@ public:
    }
 
    //--------------------------------------------------
+   // Cierre total de posiciones propias (HARD STOP)
+   // Itera en orden inverso: al cerrar se reindexan las restantes
+   //--------------------------------------------------
+
+   void CerrarTodasPropias()
+   {
+      int total = PositionsTotal();
+      int cerradas = 0;
+
+      for(int i = total - 1; i >= 0; i--)
+      {
+         ulong ticket = PositionGetTicket(i);
+
+         if(ticket == 0)
+            continue;
+
+         if(!PositionSelectByTicket(ticket))
+            continue;
+
+         long  posMagic   = PositionGetInteger(POSITION_MAGIC);
+         string posSymbol = PositionGetString(POSITION_SYMBOL);
+
+         if(posMagic != m_magicNumber || posSymbol != _Symbol)
+            continue;
+
+         if(m_execution.CloseByTicket(ticket))
+            cerradas++;
+      }
+
+      Print("HARD STOP: posiciones cerradas: ",
+            cerradas, " (de ", total, " en el simbolo).");
+   }
+
+   //--------------------------------------------------
    // Finalización
    //--------------------------------------------------
 
