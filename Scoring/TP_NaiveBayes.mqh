@@ -9,7 +9,8 @@
 //| NB_MAX_SAMPLES operaciones (las mas antiguas se descartan).       |
 //| Suavizado de Laplace (alpha = 1) en priors y features.           |
 //|                                                                  |
-//| Persistencia: MQL5/Files/TradePilot_NB.csv                      |
+//| Persistencia: MQL5/Files/TradePilot_NB_{Symbol}_{TF}.csv         |
+//| Un archivo por simbolo y temporalidad (operaciones independientes).|
 //| (cabecera "dir,tend,htf,setup,sesion,ganador").                  |
 //|                                                                  |
 //| Uso: modelo.ProbabilidadGanar(dir, tend, htf, setup, sesion)     |
@@ -23,8 +24,9 @@
 // Ventana deslizante de aprendizaje
 const int    NB_MAX_SAMPLES  = 100;
 
-// Archivo de persistencia (MQL5/Files)
-const string NB_ARCHIVO      = "TradePilot_NB.csv";
+// Nombre del archivo legacy (una sola semilla de XAUUSD M5).
+// Solo se usa para migrar el modelo una vez al nuevo esquema.
+const string NB_ARCHIVO_LEGACY = "TradePilot_NB.csv";
 
 // Indices de feature
 const int    NB_F_DIR        = 0;
@@ -57,6 +59,41 @@ class CTPNaiveBayes
 private:
 
    TPNBSample m_samples[];
+
+   // Archivo de persistencia de ESTA instancia:
+   // TradePilot_NB_{Symbol}_{TF}.csv (uno por simbolo y temporalidad)
+   string m_archivo;
+
+   //--------------------------------------------------
+   // Etiqueta corta de la temporalidad (M5, M15, H1, ...)
+   //--------------------------------------------------
+
+   static string TFLabel()
+   {
+      switch(Period())
+      {
+         case PERIOD_M1:  return "M1";
+         case PERIOD_M5:  return "M5";
+         case PERIOD_M15: return "M15";
+         case PERIOD_M30: return "M30";
+         case PERIOD_H1:  return "H1";
+         case PERIOD_H4:  return "H4";
+         case PERIOD_D1:  return "D1";
+         case PERIOD_W1:  return "W1";
+         case PERIOD_MN1: return "MN1";
+         default:         return EnumToString(Period());
+      }
+   }
+
+   //--------------------------------------------------
+   // Nombre del archivo propio de este simbolo + temporalidad
+   //--------------------------------------------------
+
+   static string NombreArchivo()
+   {
+      return StringFormat("TradePilot_NB_%s_%s.csv",
+                          _Symbol, TFLabel());
+   }
 
    // Log natural (MQL5 no tiene log natural directo)
    static double Ln(double x)
@@ -154,11 +191,40 @@ public:
    {
       ArrayResize(m_samples, 0);
 
-      int handle = FileOpen(NB_ARCHIVO,
+      m_archivo = NombreArchivo();
+
+      // 1) Archivo propio del simbolo + temporalidad
+      bool cargado = CargarArchivo(m_archivo);
+
+      // 2) Migracion unica desde la semilla legacy (XAUUSD M5):
+      //    si esta instancia es la misma del modelo anterior,
+      //    toma el archivo viejo y lo persiste con su nombre nuevo.
+      if(!cargado &&
+         _Symbol == "XAUUSD" && Period() == PERIOD_M5)
+      {
+         if(CargarArchivo(NB_ARCHIVO_LEGACY))
+         {
+            // Recien cargado: se conserva la ventana completa
+            // y se reescribe con el nombre propio de la instancia
+            m_archivo = NombreArchivo();
+            Save();
+         }
+      }
+   }
+
+   //--------------------------------------------------
+   // Cargar un archivo CSV concreto a m_samples
+   //--------------------------------------------------
+
+   bool CargarArchivo(string nombre)
+   {
+      int handle = FileOpen(nombre,
                             FILE_READ | FILE_CSV | FILE_ANSI,
                             ',');
       if(handle == INVALID_HANDLE)
-         return;   // sin dataset previo: se aprende desde cero
+         return false;   // sin dataset previo: se aprende desde cero
+
+      ArrayResize(m_samples, 0);
 
       while(!FileIsEnding(handle))
       {
@@ -189,6 +255,7 @@ public:
       }
 
       FileClose(handle);
+      return true;
    }
 
    //--------------------------------------------------
@@ -197,7 +264,7 @@ public:
 
    void Save()
    {
-      int handle = FileOpen(NB_ARCHIVO,
+      int handle = FileOpen(m_archivo,
                             FILE_WRITE | FILE_CSV | FILE_ANSI,
                             ',');
       if(handle == INVALID_HANDLE)

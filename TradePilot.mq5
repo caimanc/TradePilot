@@ -62,13 +62,15 @@ input double InpTrailStepIncrease     = 5.0;  // En cuantos USD sube el SL por e
 input bool   InpTrailTP               = true; // true = extiende el TP con el SL, false = deja el TP fijo
 
 //--------------------------------------------------
-// LIMITE DE SL POR OPERACION
-// Tope del stop loss en USD. El EA no dejara un SL mas amplio que esto.
-// 0 = sin limite: usa el SL que calcula la estructura del mercado.
-// >0 = limita el SL a ese maximo en USD (ej.: 30 = SL maximo 30 USD).
+// LIMITE DE SL POR OPERACION (FILTRO ESTRICTO)
+// Si el SL estructural del mercado cuesta mas que este
+// limite en USD, la senal se DESCART A: el EA espera una
+// oportunidad cuyo SL real quepa dentro del limite.
+// 0 = sin limite: usa el SL que calcula la estructura.
+// >0 = solo opera si el SL en USD <= este maximo.
 //--------------------------------------------------
 
-input double InpMaxSL = 0.0;  // Maximo SL por operacion en USD. 0 = sin limite
+input double InpMaxSL = 0.0;  // Maximo SL por operacion en USD (filtro estricto). 0 = sin limite
 
 //--------------------------------------------------
 // FILTRO DE PROBABILIDAD (Naive Bayes entrenado)

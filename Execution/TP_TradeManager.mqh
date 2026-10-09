@@ -562,7 +562,10 @@ public:
          }
 
          //--------------------------------------------------
-         // MaxSL: cap del SL si excede el limite (USD)
+         // MaxSL: filtro estricto (USD)
+         // Si el SL estructural del mercado supera el limite
+         // NO se recorta ni se envía: la señal se descarta y
+         // el EA espera una oportunidad cuyo SL real quepa.
          //--------------------------------------------------
 
          if(m_maxSL > 0.0)
@@ -582,22 +585,15 @@ public:
 
                if(perdidaUSD > m_maxSL)
                {
-                  double nuevaDistancia =
-                     m_maxSL * tickSize / (volumen * tickValue);
-
-                  double slOriginal = buySL;
-
-                  buySL = entrada - nuevaDistancia;
-
-                  Print("MaxSL BUY: $",
+                  Print("ORDEN BLOQUEADA: MaxSL BUY $",
                         DoubleToString(perdidaUSD, 2),
-                        " → $",
+                        " > limite $",
                         DoubleToString(m_maxSL, 2),
-                        " (",
-                        DoubleToString(slOriginal, 5),
-                        " → ",
+                        " (SL ",
                         DoubleToString(buySL, 5),
-                        ")");
+                        "). Señal descartada.");
+
+                  return false;
                }
             }
          }
@@ -654,7 +650,10 @@ public:
          }
 
          //--------------------------------------------------
-         // MaxSL: cap del SL si excede el limite (USD)
+         // MaxSL: filtro estricto (USD)
+         // Si el SL estructural del mercado supera el limite
+         // NO se recorta ni se envía: la señal se descarta y
+         // el EA espera una oportunidad cuyo SL real quepa.
          //--------------------------------------------------
 
          if(m_maxSL > 0.0)
@@ -674,22 +673,15 @@ public:
 
                if(perdidaUSD > m_maxSL)
                {
-                  double nuevaDistancia =
-                     m_maxSL * tickSize / (volumen * tickValue);
-
-                  double slOriginal = sellSL;
-
-                  sellSL = entrada + nuevaDistancia;
-
-                  Print("MaxSL SELL: $",
+                  Print("ORDEN BLOQUEADA: MaxSL SELL $",
                         DoubleToString(perdidaUSD, 2),
-                        " → $",
+                        " > limite $",
                         DoubleToString(m_maxSL, 2),
-                        " (",
-                        DoubleToString(slOriginal, 5),
-                        " → ",
+                        " (SL ",
                         DoubleToString(sellSL, 5),
-                        ")");
+                        "). Señal descartada.");
+
+                  return false;
                }
             }
          }
