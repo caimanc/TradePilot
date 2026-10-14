@@ -25,7 +25,7 @@
 #include "../MarketAnalysis/TP_SweepDetector.mqh"
 #include "../MarketAnalysis/TP_DeltaFlow.mqh"
 #include "../MarketAnalysis/TP_VolumeProfile.mqh"
-
+#include "../MarketAnalysis/TP_EntrySelector.mqh"
 #include "../MarketState/TP_MarketState.mqh"
 
 #include "../Scoring/TP_ProbabilityScorer.mqh"
@@ -56,6 +56,10 @@ private:
 
    int  m_senalesEvaluadas;
    int  m_senalesEjecutadas;
+
+   // Entrada automatica: el selector decide el modo por señal
+   bool m_entradaAuto;
+   CTPEntrySelector m_entrySelector;
 
 
    //==================================================
@@ -180,6 +184,8 @@ public:
 
       m_senalesEvaluadas  = 0;
       m_senalesEjecutadas = 0;
+
+      m_entradaAuto = false;
    }
 
 
@@ -208,7 +214,8 @@ bool   vwapActivo        = false,
        bool   deltaActivo       = false,
        bool   perfilActivo      = false,
        double maxDrawdownPct    = 0.0,
-       bool   hardStop          = false)
+       bool   hardStop          = false,
+       bool   entradaAuto       = false)
     {
       Print("====================================");
       Print("Inicializando TradePilot...");
@@ -396,6 +403,8 @@ bool   vwapActivo        = false,
          Print("ERROR inicializando RiskManager.");
          return false;
       }
+
+      m_entradaAuto = entradaAuto;
 
 
       //--------------------------------------------------
@@ -644,19 +653,11 @@ bool   vwapActivo        = false,
 
 
       //--------------------------------------------------
-      // Precios de entrada
+      // ATR + estructura: el selector los necesita
       //--------------------------------------------------
 
-      double buyEntry =
-         m_market.Ask();
-
-      double sellEntry =
-         m_market.Bid();
-
-
-      //--------------------------------------------------
-      // Datos estructurales
-      //--------------------------------------------------
+      double atr =
+         m_indicators.ATR();
 
       double swingLow =
          m_swingDetector.LastSwingLow();
@@ -666,11 +667,33 @@ bool   vwapActivo        = false,
 
 
       //--------------------------------------------------
-      // ATR
+      // Entradas por dirección
+      // Auto: el selector elige modo + precio objetivo
+      // Apagado: mercado al Ask/Bid (clásico)
       //--------------------------------------------------
 
-      double atr =
-         m_indicators.ATR();
+      double buyEntry = m_market.Ask();
+      double sellEntry = m_market.Bid();
+
+      ENUM_TP_ENTRADA modoBuy  = ENTRADA_MERCADO;
+      ENUM_TP_ENTRADA modoSell = ENTRADA_MERCADO;
+
+      if(m_entradaAuto)
+      {
+         m_entrySelector.CalcularEntradas(
+            m_market.Ask(),
+            m_market.Bid(),
+            m_priceSeries.Close(1),
+            swingHigh,
+            swingLow,
+            atr,
+            m_indicators.EMA20() > m_indicators.EMA50(),
+            m_indicators.EMA20() < m_indicators.EMA50(),
+            modoBuy,
+            buyEntry,
+            modoSell,
+            sellEntry);
+      }
 
 
       // Análisis avanzado (opcional)
@@ -860,21 +883,32 @@ bool   vwapActivo        = false,
       //==================================================
 
       //--------------------------------------------------
-      // Volumen final (auto requiere distancia real del SL)
+      // Volumen final (auto requiere distancia real del SL
+      // desde el PRECIO DE ENTRADA — objetivo en modos
+      // LIMIT/STOP, Ask/Bid actual en MERCADO)
       //--------------------------------------------------
 
       if(m_signalManager.Sell())
          m_riskManager.CalcularVolumen(
-            sellSL - SymbolInfoDouble(m_config.Symbol(), SYMBOL_BID));
+            sellSL - sellEntry);
 
       else if(m_signalManager.Buy())
          m_riskManager.CalcularVolumen(
-            SymbolInfoDouble(m_config.Symbol(), SYMBOL_ASK) - buySL);
+            buyEntry - buySL);
+
+      // Modo efectivo: el de la señal que va a ejecutarse
+      ENUM_TP_ENTRADA modo =
+         (m_signalManager.Buy()  ? modoBuy  :
+          m_signalManager.Sell() ? modoSell :
+          ENTRADA_MERCADO);
 
       m_tradeManager.Update(
          m_signalManager,
          m_marketState,
          m_riskManager,
+         modo,
+         buyEntry,
+         sellEntry,
          buySL,
          sellSL,
          buyTP,

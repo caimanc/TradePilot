@@ -80,6 +80,72 @@ private:
    }
 
    //--------------------------------------------------
+   // Pendiente propia: orden pendiente del EA en _Symbol
+   // (mismo patrón: filtrar por magic + símbolo)
+   //--------------------------------------------------
+
+   ulong TicketPendientePropia() const
+   {
+      int total = OrdersTotal();
+
+      for(int i = 0; i < total; i++)
+      {
+         ulong ticket = OrderGetTicket(i);
+
+         if(ticket == 0)
+            continue;
+
+         if(!OrderSelect(ticket))
+            continue;
+
+         long  orderMagic   = OrderGetInteger(ORDER_MAGIC);
+         string orderSymbol = OrderGetString(ORDER_SYMBOL);
+
+         if(orderMagic == m_magicNumber &&
+            orderSymbol == _Symbol)
+         {
+            return ticket;
+         }
+      }
+
+      return 0;
+   }
+
+   //--------------------------------------------------
+   // Cancelar todas las pendientes propias (al detenerse
+   // o cuando el modo ya no las requiere)
+   //--------------------------------------------------
+
+   void CancelarPendientesPropias()
+   {
+      int total = OrdersTotal();
+      int canceladas = 0;
+
+      for(int i = total - 1; i >= 0; i--)
+      {
+         ulong ticket = OrderGetTicket(i);
+
+         if(ticket == 0)
+            continue;
+
+         if(!OrderSelect(ticket))
+            continue;
+
+         long  orderMagic   = OrderGetInteger(ORDER_MAGIC);
+         string orderSymbol = OrderGetString(ORDER_SYMBOL);
+
+         if(orderMagic != m_magicNumber || orderSymbol != _Symbol)
+            continue;
+
+         if(m_execution.CancelOrder(ticket))
+            canceladas++;
+      }
+
+      if(canceladas > 0)
+         Print("Pendientes canceladas: ", canceladas);
+   }
+
+   //--------------------------------------------------
    // Conversión USD <-> distancia de precio
    //--------------------------------------------------
 
@@ -437,6 +503,9 @@ public:
       const CTPSignalManager &signals,
       const CTPMarketState &marketState,
       CTPRiskManager &risk,
+      ENUM_TP_ENTRADA modo,
+      double buyEntry,
+      double sellEntry,
       double buySL,
       double sellSL,
       double buyTP,
@@ -506,13 +575,32 @@ public:
 
                     return true;   // sin trailing esta vela
                  }
-              }
-           }
-
+}
+            }
 
 
            return true;   // posicion gestionada: trailing ya se evalua por tick
         }
+
+      //--------------------------------------------------
+      // Órdenes pendientes propias (modos LIMIT/STOP)
+      // - Si existe pendiente y la señal sigue viva: esperar
+      // - Si existe pendiente pero la señal murió: cancelarla
+      // - Nunca se duplican pendientes
+      //--------------------------------------------------
+
+      if(modo != ENTRADA_MERCADO)
+      {
+         ulong pendiente = TicketPendientePropia();
+
+         if(pendiente != 0)
+         {
+            if(!signals.Buy() && !signals.Sell())
+               CancelarPendientesPropias();
+
+            return true;
+         }
+      }
 
       //--------------------------------------------------
       // No hay posición: resetear estado del trailing TP
@@ -570,7 +658,6 @@ public:
 
          if(m_maxSL > 0.0)
          {
-            double entrada  = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
             double punto    = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
             double tickSize = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
             double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
@@ -578,7 +665,7 @@ public:
 
             if(tickSize > 0.0 && tickValue > 0.0 && volumen > 0.0)
             {
-               double distanciaPrecio = entrada - buySL;
+               double distanciaPrecio = buyEntry - buySL;
 
                double perdidaUSD =
                   distanciaPrecio / tickSize * volumen * tickValue;
@@ -598,12 +685,37 @@ public:
             }
          }
 
-          bool ok =
-             m_execution.Buy(
-                risk.Volume(),
-                buySL,
-                buyTP,
-                signals.CommentBuy());
+          //--------------------------------------------------
+         // Ejecutar segun modo de entrada
+         // MERCADO: compra inmediata al Ask
+         // LIMIT: orden pendiente en buyEntry (retroceso)
+         // STOP:  orden pendiente en buyEntry (ruptura)
+         //--------------------------------------------------
+
+         bool ok = false;
+
+         if(modo == ENTRADA_LIMIT)
+            ok = m_execution.BuyLimit(
+                   risk.Volume(),
+                   buyEntry,
+                   buySL,
+                   buyTP,
+                   signals.CommentBuy());
+
+         else if(modo == ENTRADA_STOP)
+            ok = m_execution.BuyStop(
+                   risk.Volume(),
+                   buyEntry,
+                   buySL,
+                   buyTP,
+                   signals.CommentBuy());
+
+         else
+            ok = m_execution.Buy(
+                   risk.Volume(),
+                   buySL,
+                   buyTP,
+                   signals.CommentBuy());
 
          if(ok)
          {
@@ -658,7 +770,7 @@ public:
 
          if(m_maxSL > 0.0)
          {
-            double entrada  = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+            double entrada  = sellEntry;
             double punto    = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
             double tickSize = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
             double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
@@ -686,12 +798,37 @@ public:
             }
          }
 
-          bool ok =
-             m_execution.Sell(
-                risk.Volume(),
-                sellSL,
-                sellTP,
-                signals.CommentSell());
+          //--------------------------------------------------
+         // Ejecutar segun modo de entrada
+         // MERCADO: venta inmediata al Bid
+         // LIMIT: orden pendiente en sellEntry (retroceso)
+         // STOP:  orden pendiente en sellEntry (ruptura)
+         //--------------------------------------------------
+
+         bool ok = false;
+
+         if(modo == ENTRADA_LIMIT)
+            ok = m_execution.SellLimit(
+                   risk.Volume(),
+                   sellEntry,
+                   sellSL,
+                   sellTP,
+                   signals.CommentSell());
+
+         else if(modo == ENTRADA_STOP)
+            ok = m_execution.SellStop(
+                   risk.Volume(),
+                   sellEntry,
+                   sellSL,
+                   sellTP,
+                   signals.CommentSell());
+
+         else
+            ok = m_execution.Sell(
+                   risk.Volume(),
+                   sellSL,
+                   sellTP,
+                   signals.CommentSell());
 
          if(ok)
          {
@@ -750,6 +887,10 @@ public:
 
    void Shutdown()
    {
+      // Al detenerse se cancelan las órdenes pendientes propias
+      // (no quedan huérfanas esperando el llenado)
+      CancelarPendientesPropias();
+
       Print("TradeManager detenido.");
    }
 

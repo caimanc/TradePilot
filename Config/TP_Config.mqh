@@ -4,6 +4,21 @@
 //+------------------------------------------------------------------+
 //| Configuración global del Expert                                 |
 //+------------------------------------------------------------------+
+
+//--------------------------------------------------
+// Modo de entrada de órdenes
+// MERCADO: ejecución inmediata al precio actual (comportamiento clásico)
+// LIMIT  : orden pendiente en retroceso (mejor precio; 0.5xATR)
+// STOP   : orden pendiente en ruptura (peor precio; 0.5xATR)
+//--------------------------------------------------
+
+enum ENUM_TP_ENTRADA
+{
+   ENTRADA_MERCADO = 0,
+   ENTRADA_LIMIT   = 1,
+   ENTRADA_STOP    = 2
+};
+
 class CTPConfig
 {
 private:

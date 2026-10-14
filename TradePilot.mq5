@@ -73,6 +73,16 @@ input bool   InpTrailTP               = true; // true = extiende el TP con el SL
 input double InpMaxSL = 0.0;  // Maximo SL por operacion en USD (filtro estricto). 0 = sin limite
 
 //--------------------------------------------------
+// MODO DE ENTRADA
+// false = entrada clasica a mercado (siempre)
+// true  = el EA elige por señal: mercado si hay ruptura
+//         en curso, STOP si hay compresion contra nivel,
+//         LIMIT si el precio esta extendido (retroceso)
+//--------------------------------------------------
+
+input bool InpEntradaAuto = false; // Entrada automatica (elige modo por senal). false = mercado
+
+//--------------------------------------------------
 // FILTRO DE PROBABILIDAD (Naive Bayes entrenado)
 // P(de senalar) lo calcula un modelo Naive Bayes entrenado
 // con operaciones reales (tendencia, HTF, setup, sesion).
@@ -143,7 +153,8 @@ InpPatronesActivo,
 InpDeltaActivo,
             InpPerfilActivo,
             InpMaxDrawdown,
-            InpHardStop))
+            InpHardStop,
+            InpEntradaAuto))
    {
       Print("ERROR: No fue posible inicializar TradePilot.");
       return INIT_FAILED;
